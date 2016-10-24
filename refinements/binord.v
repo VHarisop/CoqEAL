@@ -9,7 +9,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Refinements.Op zmodp.
+Import Refinements zmodp.
 
 Local Open Scope ring_scope.
 
@@ -17,33 +17,33 @@ Section binord_op.
 
 Definition binord := fun (_ : nat) => N.
 
-Global Instance zero_ord n : zero_of (binord n) := N.zero.
+Global Instance zero_ord n : Op.zero_of (binord n) := N.zero.
 
-Global Instance one_ord n : one_of (binord n.+1) :=
+Global Instance one_ord n : Op.one_of (binord n.+1) :=
   if (n == 0)%N then N.zero else N.one.
 
-Global Instance opp_ord n : opp_of (binord n) :=
-  fun x => N.modulo ((implem n) - x) (implem n).
+Global Instance opp_ord n : Op.opp_of (binord n) :=
+  fun x => (((implem n) - x : N) %% implem n : N)%C.
 
-Global Instance add_ord n : add_of (binord n) :=
-  fun x y => N.modulo (x + y) (implem n).
+Global Instance add_ord n : Op.add_of (binord n) :=
+  fun x y => ((x + y : N) %% implem n)%C.
 
-Global Instance sub_ord n : sub_of (binord n) :=
-  fun x y => N.modulo (x + (N.modulo ((implem n) - y) (implem n))) (implem n).
+Global Instance sub_ord n : Op.sub_of (binord n) :=
+  fun x y => (((x : N) + ((implem n - y : N) %% implem n) : N) %% implem n)%C.
 
-Global Instance mul_ord n : mul_of (binord n) :=
-  fun x y => N.modulo (x * y) (implem n).
+Global Instance mul_ord n : Op.mul_of (binord n) :=
+  fun x y => ((x * y : N) %% implem n)%C.
 
-Global Instance exp_ord n : exp_of (binord n) N :=
-  fun x y => N.modulo (x ^ y) (implem n).
+Global Instance exp_ord n : Op.exp_of (binord n) N :=
+  fun x y => ((x ^ y : N) %% implem n)%C.
 
-Global Instance eq_ord n : eq_of (binord n) := N.eqb.
+Global Instance eq_ord n : Op.eq_of (binord n) := (Op.eq : N -> N -> bool).
 
-Global Instance leq_ord n : leq_of (binord n) := N.leb.
+Global Instance leq_ord n : Op.leq_of (binord n) := (Op.leq : N -> N -> bool).
 
-Global Instance lt_ord n : lt_of (binord n) := N.ltb.
+Global Instance lt_ord n : Op.lt_of (binord n) := (Op.lt : N -> N -> bool).
 
-Global Instance implem_ord n : implem_of 'I_n (binord n) :=
+Global Instance implem_ord n : Op.implem_of 'I_n (binord n) :=
   fun x => implem (x : nat).
 
 End binord_op.
@@ -66,16 +66,15 @@ Proof.
   by case: n2 rn.
 Qed.
 
-Local Instance refines_nat_R_S n1 n2 :
-  refines nat_R n1 n2 -> refines nat_R n1.+1 n2.+1.
-Proof. rewrite refinesE; exact: nat_R_S_R. Qed.
+(* Lemma nat_R_S n1 n2 : nat_R n1 n2 -> nat_R n1.+1 n2.+1. *)
+(* Proof. rewrite refinesE; exact: nat_R_S_R. Qed. *)
 
 Local Instance refines_implem_eq A B (R : A -> B -> Type)
-      `{implem_of A B, !refines (eq ==> R) implem_id implem} x y :
-  refines eq x y -> refines R x (implem y).
+      `{Op.implem_of A B, !refines (Logic.eq ==> R) Op.implem_id implem} x y :
+  refines eq x y -> refines_in R x (implem y).
 Proof.
   move=> eqxy.
-  rewrite -[x]/(implem_id _).
+  rewrite -[x]/(Op.implem_id _).
   exact: refines_apply.
 Qed.
 
@@ -87,8 +86,8 @@ Local Arguments N.sub : simpl nomatch.
 Global Instance Rord_opp n1 n2 (rn : nat_R n1 n2) :
   refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn)) -%R -%C.
 Proof.
-  rewrite refinesE=> x x' hx /=.
-  exact: refinesP.
+move/nat_R_S_R in rn *.
+by rewrite refinesE=> x x' hx /=; exact: spec_refines.
 Qed.
 
 Local Arguments add_op /.
@@ -98,8 +97,9 @@ Global Instance Rord_add n1 n2 (rn : nat_R n1 n2) :
   refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn))
           +%R +%C.
 Proof.
-  rewrite refinesE=> x x' hx y y' hy /=.
-  exact: refinesP.
+move/nat_R_S_R in rn *.
+rewrite refinesE=> x x' hx y y' hy /=.
+exact: spec_refines.
 Qed.
 
 Local Arguments sub_op /.
@@ -109,8 +109,9 @@ Global Instance Rord_sub n1 n2 (rn : nat_R n1 n2) :
   refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn))
           (fun x y => x - y) sub_op.
 Proof.
-  rewrite refinesE=> x x' hx y y' hy /=.
-  exact: refinesP.
+move/nat_R_S_R in rn *.
+rewrite refinesE=> x x' hx y y' hy /=.
+exact: spec_refinesP.
 Qed.
 
 Local Arguments mul_op /.
@@ -120,8 +121,9 @@ Global Instance Rord_mul n1 n2 (rn : nat_R n1 n2) :
   refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn))
           (@Zp_mul n1) *%C.
 Proof.
-  rewrite refinesE=> x x' hx y y' hy /=.
-  exact: refinesP.
+move/nat_R_S_R in rn *.
+rewrite refinesE=> x x' hx y y' hy /=.
+exact: spec_refines.
 Qed.
 
 Local Arguments eq_op /.
@@ -129,11 +131,12 @@ Local Arguments eq_ord /.
 
 Global Instance Rord_eq n1 n2 (rn : nat_R n1 n2) :
   refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn) ==> bool_R)
-          eqtype.eq_op eq_op.
+          eqtype.eq_op Op.eq.
 Proof.
-  rewrite refinesE=> x x' hx y y' hy /=.
-  have -> : (x == y) = (x == y :> nat) by [].
-  exact: refinesP.
+move/nat_R_S_R in rn *.
+rewrite refinesE=> /= x x' hx y y' hy.
+have -> /= : (x == y) = (x == y :> nat) by [].
+exact: eq_spec_refines.
 Qed.
 
 Local Arguments leq_op /.
@@ -143,8 +146,9 @@ Global Instance Rord_leq n1 n2 (rn : nat_R n1 n2) :
   refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn) ==> bool_R)
           (fun x y => (x <= y)%N) leq_op.
 Proof.
-  rewrite refinesE=> x x' hx y y' hy /=.
-  exact: refinesP.
+move/nat_R_S_R in rn *.
+rewrite refinesE=> x x' hx y y' hy /=.
+exact: eq_spec_refines.
 Qed.
 
 Local Arguments lt_op /.
@@ -156,23 +160,23 @@ Global Instance Rord_lt n1 n2 (rn : nat_R n1 n2) :
           (fun x y => ltn x y) lt_op.
 Proof.
   rewrite refinesE=> x x' hx y y' hy /=.
-  exact: refinesP.
+  exact: eq_spec_refines.
 Qed.
 
-Local Arguments implem_id /.
-Local Arguments implem /.
+Local Arguments Op.implem_id /.
+Local Arguments Op.implem /.
 Local Arguments implem_ord /.
 
 Global Instance Rord_implem n1 n2 (rn : nat_R n1 n2) :
-  refines (ordinal_R rn ==> Rord rn) implem_id implem.
+  refines (ordinal_R rn ==> Rord rn) Op.implem_id implem.
 Proof.
-  rewrite refinesE=> x y rxy /=.
-  rewrite -[implem_N]/implem.
-  have hxy : refines eq (nat_of_ord x) (nat_of_ord y).
-    rewrite refinesE.
-    case: rxy=> m1 m2 rm _ _ _ /=.
-    by rewrite (nat_R_eq rm).
-  exact: refinesP.
+rewrite refinesE=> x y rxy /=.
+rewrite -[implem_N]/implem.
+have hxy : refines eq (nat_of_ord x) (nat_of_ord y).
+  rewrite refinesE.
+  case: rxy=> m1 m2 rm _ _ _ /=.
+  by rewrite (nat_R_eq rm).
+exact: spec_refines.
 Qed.
 
 Global Instance Rnat_nat_of_ord n1 n2 (rn : nat_R n1 n2) :

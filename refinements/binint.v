@@ -21,7 +21,7 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 
-Import GRing.Theory Num.Theory Refinements Op.
+Import GRing.Theory Num.Theory Refinements.
 
 (******************************************************************************)
 (** PART I: Defining generic datastructures and programming with them         *)
@@ -36,18 +36,18 @@ Inductive Z := Zpos of N | Zneg of P.
 Definition Zmatch T (n : Z) f g : T :=
    match n with Zpos p => f p | Zneg n => g n end.
 
-Context `{zero_of N, one_of N, sub_of N, add_of N, mul_of N, exp_of N N,
-          mod_of N, leq_of N, lt_of N, eq_of N}.
-Context `{one_of P, sub_of P, add_of P, mul_of P, exp_of P P, eq_of P, leq_of P,
-          lt_of P}.
-Context `{cast_of N P, cast_of P N}.
-Context `{spec_of N nat, spec_of P pos}.
-Context `{implem_of nat N, implem_of pos P}.
+Context `{Op.zero_of N, Op.one_of N, Op.sub_of N, Op.add_of N, Op.mul_of N, Op.exp_of N N,
+          Op.mod_of N, Op.leq_of N, Op.lt_of N, Op.eq_of N}.
+Context `{Op.one_of P, Op.sub_of P, Op.add_of P, Op.mul_of P, Op.exp_of P P, Op.eq_of P, Op.leq_of P,
+          Op.lt_of P}.
+Context `{Op.cast_of N P, Op.cast_of P N}.
+Context `{Op.spec_of N nat, Op.spec_of P pos}.
+Context `{Op.implem_of nat N, Op.implem_of pos P}.
 
-Global Instance zeroZ : zero_of Z := Zpos 0.
-Global Instance oneZ : one_of Z := Zpos 1.
+Global Instance zeroZ : Op.zero_of Z := Zpos 0.
+Global Instance oneZ : Op.one_of Z := Zpos 1.
 
-Global Instance addZ : add_of Z := fun x y : Z => match x, y with
+Global Instance addZ : Op.add_of Z := fun x y : Z => match x, y with
   | Zpos x, Zpos y => Zpos (x + y)
   | Zneg x, Zneg y => Zneg (x + y)
   | Zpos x, Zneg y => if (cast y <= x) then Zpos (x - cast y)
@@ -56,12 +56,12 @@ Global Instance addZ : add_of Z := fun x y : Z => match x, y with
                                        else Zneg (cast (cast x - y))
   end.
 
-Global Instance oppZ : opp_of Z := fun x : Z => match x with
+Global Instance oppZ : Op.opp_of Z := fun x : Z => match x with
   | Zpos x => if (x == 0)%C then 0%C else Zneg (cast x)
   | Zneg x => Zpos (cast x)
   end.
 
-Global Instance subZ : sub_of Z := fun x y : Z => match x, y with
+Global Instance subZ : Op.sub_of Z := fun x y : Z => match x, y with
   | Zpos x, Zneg y => Zpos (x + cast y)
   | Zneg x, Zpos y => if (y == 0)%C then Zneg x else Zneg (x + cast y)
   | Zpos x, Zpos y => if (y <= x) then Zpos (x - y)
@@ -71,20 +71,20 @@ Global Instance subZ : sub_of Z := fun x y : Z => match x, y with
                       else Zneg (cast ((cast x : N) - cast y))
   end.
 
-Global Instance eqZ : eq_of Z := fun x y : Z => match x, y with
+Global Instance eqZ : Op.eq_of Z := fun x y : Z => match x, y with
   | Zpos x, Zpos y => (x == y)
   | Zneg x, Zneg y => (x == y)
   | _, _ => false
   end.
 
-Global Instance mulZ : mul_of Z := fun x y : Z => match x, y with
+Global Instance mulZ : Op.mul_of Z := fun x y : Z => match x, y with
   | Zpos x, Zpos y => Zpos (x * y)
   | Zneg x, Zpos y => if (y == 0)%C then 0%C else Zneg (x * cast y)
   | Zpos x, Zneg y => if (x == 0)%C then 0%C else Zneg (cast x * y)
   | Zneg x, Zneg y => Zpos (cast x * cast y)
   end.
 
-Global Instance expZ : exp_of Z N := fun x n =>
+Global Instance expZ : Op.exp_of Z N := fun x n =>
   if (n == 0)%C then 1%C else
     match x with
     | Zpos x => Zpos (x ^ n)
@@ -92,36 +92,36 @@ Global Instance expZ : exp_of Z N := fun x n =>
                 else Zneg (x ^ (cast n : P))
     end.
 
-Global Instance leqZ : leq_of Z := fun x y : Z => match x, y with
+Global Instance leqZ : Op.leq_of Z := fun x y : Z => match x, y with
   | Zpos x, Zpos y => (x <= y)
   | Zneg x, Zneg y => (y <= x)
   | Zneg _, Zpos _ => true
   | Zpos _, Zneg _ => false
   end.
 
-Global Instance ltZ : lt_of Z := fun x y : Z => match x, y with
+Global Instance ltZ : Op.lt_of Z := fun x y : Z => match x, y with
   | Zpos x, Zpos y => (x < y)
   | Zneg x, Zneg y => (y < x)
   | Zneg _, Zpos _ => true
   | Zpos _, Zneg _ => false
   end.
 
-Global Instance cast_NZ : cast_of N Z := fun n : N => Zpos n.
+Global Instance cast_NZ : Op.cast_of N Z := fun n : N => Zpos n.
 
-Global Instance cast_PZ : cast_of P Z := fun n : P => Zpos (cast n).
+Global Instance cast_PZ : Op.cast_of P Z := fun n : P => Zpos (cast n).
 
-Global Instance cast_ZN : cast_of Z N := fun z =>
+Global Instance cast_ZN : Op.cast_of Z N := fun z =>
   if z is Zpos n then n else 0.
 
-Global Instance cast_ZP : cast_of Z P := fun z => cast (cast_ZN z).
+Global Instance cast_ZP : Op.cast_of Z P := fun z => cast (cast_ZN z).
 
-Global Instance specZ : spec_of Z int :=
+Global Instance specZ : Op.spec_of Z int :=
   fun x => (match x with
              | Zpos p => (spec p : nat)%:Z
              | Zneg n => - (spec (cast n : N): nat)%:Z
            end)%R.
 
-Global Instance implemZ : implem_of int Z :=
+Global Instance implemZ : Op.implem_of int Z :=
   fun x => (match x with
             | Posz n => Zpos (implem n)
             | Negz n => Zneg (implem (posS n))
@@ -175,22 +175,22 @@ Local Open Scope rel_scope.
 
 Definition Rint : int -> Znp -> Type := fun_hrel int_of_Z.
 
-Local Instance zero_nat : zero_of nat := 0%N.
-Local Instance one_nat  : one_of nat  := 1%N.
-Local Instance add_nat  : add_of nat  := addn.
-Local Instance sub_nat  : sub_of nat  := subn.
-Local Instance mul_nat  : mul_of nat  := muln.
-Local Instance exp_nat  : exp_of nat nat := expn.
-Local Instance mod_nat  : mod_of nat := modn.
-Local Instance leq_nat  : leq_of nat  := ssrnat.leq.
-Local Instance lt_nat   : lt_of nat  := ssrnat.ltn.
-Local Instance eq_nat   : eq_of nat   := eqtype.eq_op.
+Local Instance zero_nat : Op.zero_of nat := 0%N.
+Local Instance one_nat  : Op.one_of nat  := 1%N.
+Local Instance add_nat  : Op.add_of nat  := addn.
+Local Instance sub_nat  : Op.sub_of nat  := subn.
+Local Instance mul_nat  : Op.mul_of nat  := muln.
+Local Instance exp_nat  : Op.exp_of nat nat := expn.
+Local Instance mod_nat  : Op.mod_of nat := modn.
+Local Instance leq_nat  : Op.leq_of nat  := ssrnat.leq.
+Local Instance lt_nat   : Op.lt_of nat  := ssrnat.ltn.
+Local Instance eq_nat   : Op.eq_of nat   := eqtype.eq_op.
 
-Local Instance spec_nat : spec_of nat nat := spec_id.
-Local Instance spec_ps : spec_of pos pos := spec_id.
+Local Instance spec_nat : Op.spec_of nat nat := Op.spec_id.
+Local Instance spec_ps : Op.spec_of pos pos := Op.spec_id.
 
-Local Instance implem_nat : implem_of nat nat := implem_id.
-Local Instance implem_ps : implem_of pos pos := implem_id.
+Local Instance implem_nat : Op.implem_of nat nat := Op.implem_id.
+Local Instance implem_ps : Op.implem_of pos pos := Op.implem_id.
 
 Lemma RintE n x : refines Rint n x -> n = int_of_Z x.
 Proof. by rewrite refinesE. Qed.
@@ -328,10 +328,10 @@ Local Instance Rint_specZ_r x : refines Rint (spec x) x.
 Proof. by rewrite !refinesE; case: x. Qed.
 
 Local Instance Rint_specZ_l :
-  refines (Rint ==> Logic.eq) spec_id spec.
+  refines (Rint ==> Logic.eq) Op.spec_id spec.
 Proof. by rewrite refinesE => a a' ra; rewrite [spec _]RintE. Qed.
 
-Local Instance Rint_implem : refines (Logic.eq ==> Rint) implem_id implem.
+Local Instance Rint_implem : refines (Logic.eq ==> Rint) Op.implem_id implem.
 Proof.
   rewrite refinesE=> _ x ->.
   by case: x.
@@ -349,13 +349,13 @@ Variables (Rnat : nat -> N -> Type) (Rpos : pos -> P -> Type).
 
 Definition RZNP := (Rint \o Z_R Rnat Rpos)%rel.
 
-Context `{zero_of N, one_of N, sub_of N, add_of N, mul_of N, exp_of N N,
-          mod_of N, leq_of N, eq_of N, lt_of N}.
-Context `{one_of P, sub_of P, add_of P, mul_of P, exp_of P P, eq_of P, leq_of P,
-          lt_of P}.
-Context `{cast_of N P, cast_of P N}.
-Context `{spec_of N nat, spec_of P pos}.
-Context `{implem_of nat N, implem_of pos P}.
+Context `{Op.zero_of N, Op.one_of N, Op.sub_of N, Op.add_of N, Op.mul_of N, Op.exp_of N N,
+          Op.mod_of N, Op.leq_of N, Op.eq_of N, Op.lt_of N}.
+Context `{Op.one_of P, Op.sub_of P, Op.add_of P, Op.mul_of P, Op.exp_of P P, Op.eq_of P, Op.leq_of P,
+          Op.lt_of P}.
+Context `{Op.cast_of N P, Op.cast_of P N}.
+Context `{Op.spec_of N nat, Op.spec_of P pos}.
+Context `{Op.implem_of nat N, Op.implem_of pos P}.
 
 Context `{!refines Rnat 0%N 0%C, !refines Rnat 1%N 1%C}.
 Context `{!refines Rpos pos1 1%C}.
@@ -380,10 +380,10 @@ Context `{forall x, refines Rnat (spec x) x,
           forall x, refines Rpos (spec x) x}.
 (* Context `{!refines (Rnat ==> nat_R) spec_id spec, *)
 (*           !refines (Rpos ==> pos_R) spec_id spec}. *)
-Context `{!refines (Rnat ==> Logic.eq) spec_id spec,
-          !refines (Rpos ==> Logic.eq) spec_id spec}.
-Context `{!refines (Logic.eq ==> Rnat) implem_id implem,
-          !refines (Logic.eq ==> Rpos) implem_id implem}.
+Context `{!refines (Rnat ==> Logic.eq) Op.spec_id spec,
+          !refines (Rpos ==> Logic.eq) Op.spec_id spec}.
+Context `{!refines (Logic.eq ==> Rnat) Op.implem_id implem,
+          !refines (Logic.eq ==> Rpos) Op.implem_id implem}.
 
 Local Notation Z := (Z N P).
 
@@ -423,21 +423,21 @@ Global Instance RZNP_expZ :
 Proof. param_comp expZ_R. Qed.
 
 Global Instance RZNP_eqZ :
-  refines (RZNP ==> RZNP ==> bool_R) eqtype.eq_op (@Op.eq_op Z _).
+  refines (RZNP ==> RZNP ==> bool_R) eqtype.eq_op (@Op.eq Z _).
 Proof. param_comp eqZ_R. Qed.
 
 Global Instance RZNP_leqZ :
-  refines (RZNP ==> RZNP ==> bool_R) Num.le (@Op.leq_op Z _).
+  refines (RZNP ==> RZNP ==> bool_R) Num.le (@Op.leq Z _).
 Proof. param_comp leqZ_R. Qed.
 
 Global Instance RZNP_ltZ :
-  refines (RZNP ==> RZNP ==> bool_R) Num.lt (@Op.lt_op Z _).
+  refines (RZNP ==> RZNP ==> bool_R) Num.lt (@Op.lt Z _).
 Proof. param_comp ltZ_R. Qed.
 
 (* Global Instance RZNP_specZ_l : refines (RZNP ==> int_R) spec_id spec. *)
 (* Proof. param_comp specZ_R. Qed. *)
 
-Global Instance RZNP_specZ : refines (RZNP ==> Logic.eq) spec_id spec.
+Global Instance RZNP_specZ : refines (RZNP ==> Logic.eq) Op.spec_id spec.
 Proof.
   eapply refines_trans; tc.
   rewrite refinesE=> x y rxy.
@@ -446,7 +446,7 @@ Proof.
   apply: congr1; exact: refinesP.
 Qed.
 
-Global Instance RZNP_implemZ : refines (Logic.eq ==> RZNP) implem_id implem.
+Global Instance RZNP_implemZ : refines (Logic.eq ==> RZNP) Op.implem_id implem.
 Proof.
   eapply refines_trans; tc.
   rewrite refinesE=> _ x ->.
@@ -481,13 +481,13 @@ by coqeal.
 Abort.
 
 Goal (10%:Z - 5%:Z == 1 + 4%:Z).
-rewrite -[X in (X == _)]/(spec_id _) [spec_id _]refines_eq /=.
+rewrite -[X in (X == _)]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
 by coqeal.
 Abort.
 
 Goal (-(1 + 2%:Z * 4%:Z) == -(1 + 2%:Z * 4%:Z)).
-rewrite -[X in (X == _)]/(spec_id _).
-rewrite [spec_id _]refines_eq /=.
+rewrite -[X in (X == _)]/(Op.spec_id _).
+rewrite [Op.spec_id _]refines_eq /=.
 by coqeal.
 Abort.
 

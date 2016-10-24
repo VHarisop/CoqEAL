@@ -75,7 +75,7 @@ apply: R123; exists (fB a); split; [ exact: RfAB | exact: RfBC ].
 Qed.
 
 Global Instance composable_rid1 A B (R : A -> B -> Type) :
-  composable eq R R | 1.
+  composable eq R R | 2.
 Proof.
 rewrite composableE; apply: eq_hrelRL.
 by split; [ apply: comp_eql | move=> x y hxy; exists x ].
@@ -124,7 +124,7 @@ Section refinements.
 Variable key : unit.
 Notation refines := (@refines_ key _ _).
 
-Lemma refines_eq T (x y : T) : refines eq x y -> x = y.
+Lemma refines_eq_ T (x y : T) : refines eq x y -> x = y.
 Proof. by rewrite refinesE. Qed.
 
 Lemma nat_R_eq x y : nat_R x y -> x = y.
@@ -213,14 +213,14 @@ End refinements.
 
 Definition refinesP := @refinesP_ recursive tt.
 
-Definition refines_recursive_apply := @refines_apply recursive.
-Global Existing Instance refines_recursive_apply | 99.
+Definition refines_symbol_apply := @refines_apply symbol.
+Global Existing Instance refines_symbol_apply | 99.
 
-Definition refines_recursive_bool_eq := @refines_bool_eq recursive. 
-Global Existing Instance refines_recursive_bool_eq.
+Definition refines_symbol_bool_eq := @refines_bool_eq symbol. 
+Global Existing Instance refines_symbol_bool_eq.
 
-Definition refines_recursive_nat_eq := @refines_nat_eq recursive.
-Global Existing Instance refines_recursive_nat_eq.
+Definition refines_symbol_nat_eq := @refines_nat_eq symbol.
+Global Existing Instance refines_symbol_nat_eq.
 
 Lemma refines_change key2 key1 A B (R : A -> B -> Type) :
   refines_ key1 R = refines_ key2 R.
@@ -254,6 +254,8 @@ Ltac param_comp x := eapply refines_trans; tc; param x.
 
 Notation refines := (@refines_ symbol _ _).
 Notation refines_in := (@refines_ recursive _ _).
+
+Notation refines_eq := (@refines_eq_ recursive _ _ _ _).
 
 Section global_refinements.
 
@@ -425,8 +427,6 @@ Ltac simpC :=
       ].
 
 
-
-
 (* Workaround because casts are not retained for hypothesis, so we
 design this elimination lemma to abstract the context and vm_compute in the goal *)
 Lemma abstract_context T (P : T -> Type) x : (forall Q, Q = P -> Q x) -> P x.
@@ -471,7 +471,7 @@ Hint Extern 0 (simpl _ _) =>
 Instance strategy_class_simpl : strategy_class simpl := erefl.
 
 Lemma coqeal_eq C {eqC : strategy_class C} {T T'} spec (x x' : T) {y y' : T'}
-   {rxy : refines eq (Op.spec_id x) (spec y)}  {ry : C _ y y'}
+   {rxy : refines_in eq (Op.spec_id x) (spec y)}  {ry : C _ y y'}
    {rx : simpl (spec y') x'} : x = x'.
 Proof. by rewrite eqC in ry; rewrite -rx -ry; apply: refines_eq. Qed.
 
@@ -506,11 +506,15 @@ Lemma spec_refinesP_ key A B R a a' b `{Op.spec_of B A} :
   R (Op.spec a') b -> refines_ key R a b.
 Proof. by move=> *; apply/spec_refines_. Qed.
 
+Lemma eq_spec_refines_ key A B (R : A -> B -> Type) (a : A) (a' b : B) :
+  refines_in R a a' -> a' = b -> refines_ key R a b.
+Proof. by rewrite !refinesE => Raa' <-. Qed.
+
 Definition spec_refines : forall A B R a a' b H, _ -> _ -> _ -> R a b :=
   @spec_refines_ tt.
 Definition spec_refinesP : forall A B R a a' b H, _ -> _ -> _ -> R a b :=
   @spec_refinesP_ tt.
+Definition eq_spec_refines : forall A B R a a' b, _ -> _ -> R a b :=
+  @eq_spec_refines_ tt.
 
 Ltac refines_abstrE := refines_abstr; rewrite !refinesE.
-
-Ltac coqeal := apply: refines_goal; vm_compute.

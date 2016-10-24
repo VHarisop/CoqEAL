@@ -16,7 +16,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Import Refinements.Op.
+Import Refinements.
 
 (* Notation for when we export this file *)
 Notation N := N.
@@ -27,16 +27,16 @@ Section positive_op.
 Definition positive_of_pos (p : pos) : positive := Pos.of_nat (val p).
 Definition pos_of_positive (p : positive) : pos := insubd pos1 (Pos.to_nat p).
 
-Global Instance spec_positive   : spec_of positive pos := pos_of_positive.
-Global Instance implem_positive : implem_of pos positive := positive_of_pos.
-Global Instance one_positive    : one_of positive := xH.
-Global Instance add_positive    : add_of positive := Pos.add.
-Global Instance sub_positive    : sub_of positive := Pos.sub.
-Global Instance mul_positive    : mul_of positive := Pos.mul.
-Global Instance le_positive     : leq_of positive := Pos.leb.
-Global Instance lt_positive     : lt_of positive  := Pos.ltb.
-Global Instance eq_positive     : eq_of positive  := Pos.eqb.
-Global Instance exp_positive    : exp_of positive positive := Pos.pow.
+Global Instance spec_positive   : Op.spec_of positive pos := pos_of_positive.
+Global Instance implem_positive : Op.implem_of pos positive := positive_of_pos.
+Global Instance one_positive    : Op.one_of positive := xH.
+Global Instance add_positive    : Op.add_of positive := Pos.add.
+Global Instance sub_positive    : Op.sub_of positive := Pos.sub.
+Global Instance mul_positive    : Op.mul_of positive := Pos.mul.
+Global Instance le_positive     : Op.leq_of positive := Pos.leb.
+Global Instance lt_positive     : Op.lt_of positive  := Pos.ltb.
+Global Instance eq_positive     : Op.eq_of positive  := Pos.eqb.
+Global Instance exp_positive    : Op.exp_of positive positive := Pos.pow.
 End positive_op.
 
 Section positive_theory.
@@ -90,10 +90,10 @@ Proof. by rewrite !refinesE. Qed.
 (*   exact: pos_Rxx. *)
 (* Qed. *)
 
-Global Instance Rpos_spec : refines (Rpos ==> Logic.eq) spec_id spec.
+Global Instance Rpos_spec : refines (Rpos ==> Logic.eq) Op.spec_id Op.spec.
 Proof. by rewrite refinesE. Qed.
 
-Global Instance Rpos_implem : refines (Logic.eq ==> Rpos) implem_id implem.
+Global Instance Rpos_implem : refines (Logic.eq ==> Rpos) Op.implem_id implem.
 Proof.
   rewrite refinesE=> _ x ->.
   case: x=> n ngt0.
@@ -127,7 +127,7 @@ rewrite /sub_op /sub_positive Pos.sub_le ?Pos2Nat.inj_le //.
 by rewrite subn_gt0 !ltnNge; move/leP: h ->.
 Qed.
 
-Global Instance Rpos_leq : refines (Rpos ==> Rpos ==> bool_R) leq_pos leq_op.
+Global Instance Rpos_leq : refines (Rpos ==> Rpos ==> bool_R) leq_pos Op.leq.
 Proof.
   rewrite refinesE=> _ x <- _ y <-;
   rewrite /leq_op /le_positive /leq_pos !val_insubd.
@@ -136,7 +136,7 @@ Proof.
   [move ->|rewrite -eqbF_neg; move/eqP ->].
 Qed.
 
-Global Instance Rpos_lt : refines (Rpos ==> Rpos ==> bool_R) lt_pos lt_op.
+Global Instance Rpos_lt : refines (Rpos ==> Rpos ==> bool_R) lt_pos Op.lt.
 Proof.
 rewrite refinesE => /= _ x <- _ y <-; rewrite /lt_pos !val_insubd.
 move: (Pos2Nat.is_pos x) (Pos2Nat.is_pos y) => /leP -> /leP ->.
@@ -145,7 +145,7 @@ have -> : (Pos.to_nat x < Pos.to_nat y) = (x < y)%C.
 exact: bool_Rxx.
 Qed.
 
-Global Instance Rpos_eq : refines (Rpos ==> Rpos ==> bool_R) eq_pos eq_op.
+Global Instance Rpos_eq : refines (Rpos ==> Rpos ==> bool_R) eq_pos Op.eq.
 Proof.
   rewrite refinesE=> _ x <- _ y <-; rewrite /eq_op /eq_positive /eq_pos.
   case: (Pos.eqb_spec _ _)=> [->|h].
@@ -184,27 +184,27 @@ Global Opaque pos_of_positive positive_of_pos.
 
 Section binnat_op.
 
-Global Instance zero_N : zero_of N := N.zero.
-Global Instance one_N  : one_of N  := N.one.
-Global Instance add_N  : add_of N  := N.add.
+Global Instance zero_N : Op.zero_of N := N.zero.
+Global Instance one_N  : Op.one_of N  := N.one.
+Global Instance add_N  : Op.add_of N  := N.add.
 
 Definition succN (n : N) : N := (1 + n)%C.
 
-Global Instance sub_N  : sub_of N := N.sub.
-Global Instance exp_N  : exp_of N N := N.pow.
-Global Instance mul_N  : mul_of N := N.mul.
-Global Instance div_N  : div_of N := N.div.
-Global Instance mod_N  : mod_of N := N.modulo.
-Global Instance eq_N   : eq_of N  := N.eqb.
-Global Instance leq_N  : leq_of N := N.leb.
-Global Instance lt_N   : lt_of N  := N.ltb.
+Global Instance sub_N  : Op.sub_of N := N.sub.
+Global Instance exp_N  : Op.exp_of N N := N.pow.
+Global Instance mul_N  : Op.mul_of N := N.mul.
+Global Instance div_N  : Op.div_of N := N.div.
+Global Instance mod_N  : Op.mod_of N := N.modulo.
+Global Instance eq_N   : Op.eq_of N  := N.eqb.
+Global Instance leq_N  : Op.leq_of N := N.leb.
+Global Instance lt_N   : Op.lt_of N  := N.ltb.
 
-Global Instance cast_positive_N : cast_of positive N := Npos.
-Global Instance cast_N_positive : cast_of N positive :=
+Global Instance cast_positive_N : Op.cast_of positive N := Npos.
+Global Instance cast_N_positive : Op.cast_of N positive :=
   fun n => if n is Npos p then p else 1%C.
 
-Global Instance spec_N : spec_of N nat := nat_of_bin.
-Global Instance implem_N : implem_of nat N := bin_of_nat.
+Global Instance spec_N : Op.spec_of N nat := nat_of_bin.
+Global Instance implem_N : Op.implem_of nat N := bin_of_nat.
 
 End binnat_op.
 
@@ -220,17 +220,17 @@ Proof. by rewrite refinesE. Qed.
 Global Instance Rnat_spec_r x : refines Rnat (spec x) x.
 Proof. by rewrite refinesE. Qed.
 
-Global Instance Rnat_spec_l : refines (Rnat ==> nat_R) spec_id spec.
+Global Instance Rnat_spec_l : refines (Rnat ==> nat_R) Op.spec_id spec.
 Proof.
   rewrite refinesE=> x x' rx.
-  rewrite [spec _]RnatE /spec_id [y in nat_R y _]RnatE.
+  rewrite [spec _]RnatE /Op.spec_id [y in nat_R y _]RnatE.
   exact: nat_Rxx.
 Qed.
 
-Global Instance Rnat_spec : refines (Rnat ==> Logic.eq) spec_id spec.
+Global Instance Rnat_spec : refines (Rnat ==> Logic.eq) Op.spec_id spec.
 Proof. by rewrite refinesE. Qed.
 
-Global Instance Rnat_implem : refines (Logic.eq ==> Rnat) implem_id implem.
+Global Instance Rnat_implem : refines (Logic.eq ==> Rnat) Op.implem_id implem.
 Proof.
 rewrite !refinesE => x _ <-.
 by rewrite /Rnat /fun_hrel /implem /implem_N bin_of_natK.
@@ -310,7 +310,7 @@ Proof.
   by rewrite !nat_of_binposE pos2nat_inj_exp.
 Qed.
 
-Global Instance Rnat_eq : refines (Rnat ==> Rnat ==> bool_R) eqtype.eq_op eq_op.
+Global Instance Rnat_eq : refines (Rnat ==> Rnat ==> bool_R) eqtype.eq_op Op.eq.
 Proof.
   rewrite refinesE=> _ x <- _ y <-; rewrite /eq_op /eq_N.
   case: (N.eqb_spec _ _) => [->|/eqP hneq].
@@ -320,11 +320,11 @@ Proof.
   by apply/negP => [/eqP /(can_inj nat_of_binK)]; apply/eqP.
 Qed.
 
-Global Instance Rnat_leq : refines (Rnat ==> Rnat ==> bool_R) ssrnat.leq leq_op.
+Global Instance Rnat_leq : refines (Rnat ==> Rnat ==> bool_R) ssrnat.leq Op.leq.
 Proof.
 rewrite refinesE=> _ x <- _ y <-; rewrite /leq_op /leq_N /leq.
 case: (N.leb_spec0 _ _)=> [/N.sub_0_le|] h.
-  rewrite /(_ <= _)%N [_ == _](@refines_eq RefinesKeys.recursive) /=.
+  rewrite /(_ <= _)%N [_ == _]refines_eq /=.
   by rewrite [sub_op _ _]h.
 suff H : (nat_of_bin x - nat_of_bin y == 0) = false.
   by rewrite /(_ <= _)%N H.
@@ -335,7 +335,8 @@ Qed.
 Global Instance Rnat_lt : refines (Rnat ==> Rnat ==> bool_R) ltn lt_op.
 Proof.
 apply refines_abstr2 => x x' rx y y' ry; rewrite refinesE /Rnat /fun_hrel.
-rewrite /lt_op /lt_N N.ltb_antisym /ltn /= ltnNge [(y <= x)%N]refines_eq.
+rewrite /lt_op /lt_N N.ltb_antisym /ltn /= ltnNge.
+rewrite [(y <= x)%N]refines_eq.
 exact: bool_Rxx.
 (* Cyril: this was wrong to do it like that, we should come back and fix *)
 Qed.
@@ -352,8 +353,8 @@ Global Instance Rnat_cast_N_positive :
 Proof.
   rewrite refinesE=> x x' rx; rewrite [x]RnatE.
   case: x' {x rx} => [|p] /=; last by rewrite -to_natE.
-  rewrite /insubd insubF //= /cast; apply refinesP.
-  apply Rpos_1.
+  rewrite /insubd insubF //= /cast.
+  exact/spec_refinesP.
 Qed.
 
 End binnat_theory.

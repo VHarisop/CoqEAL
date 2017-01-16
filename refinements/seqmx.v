@@ -8,7 +8,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import GRing.Theory.
-Import Refinements.Op.
+Import Refinements.
 
 Local Open Scope ring_scope.
 
@@ -105,8 +105,8 @@ Variable I : nat -> Type.
 Definition seqmx {A} := seq (seq A).
 Definition hseqmx {A} := fun (_ _ : nat) => @seqmx A.
 
-Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A}.
-Context `{forall n, implem_of 'I_n (I n)}.
+Context `{Op.zero_of A, Op.one_of A, Op.add_of A, Op.opp_of A, Op.mul_of A, Op.eq_of A}.
+Context `{forall n, Op.implem_of 'I_n (I n)}.
 
 Definition ord_enum_eq n : seq 'I_n := pmap (insub_eq _) (iota 0 n).
 
@@ -137,14 +137,14 @@ Definition diag_seqmx (s : seqmx) :=
 
 Definition scalar_seqmx m (x : A) := diag_seqmx (const_seqmx 1%N m x).
 
-Global Instance seqmx1 m : one_of seqmx := scalar_seqmx m 1%C.
+Global Instance seqmx1 m : Op.one_of seqmx := scalar_seqmx m 1%C.
 
-Global Instance opp_seqmx : opp_of (@seqmx A) := map (map -%C).
+Global Instance opp_seqmx : Op.opp_of (@seqmx A) := map (map -%C).
 
-Global Instance add_seqmx : add_of seqmx := zipwith_seqmx +%C.
+Global Instance add_seqmx : Op.add_of seqmx := zipwith_seqmx +%C.
 
 (* TODO: Implement better *)
-Global Instance sub_seqmx : sub_of (@seqmx A) := fun a b => (a + - b)%C.
+Global Instance sub_seqmx : Op.sub_of (@seqmx A) := fun a b => (a + - b)%C.
 
 Definition trseqmx m n (M : @hseqmx A m n) :=
   if eqn m 0 then nseq n [::] else foldr (zipwith cons) (nseq n [::]) M.
@@ -155,7 +155,7 @@ Global Instance mul_seqmx : @hmul_of nat hseqmx :=
     if n is O then seqmx0 (size M) p else
       map (fun r => map (foldl2 (fun z x y => (x * y) + z) 0 r)%C N) M.
 
-Global Instance scale_seqmx : scale_of A seqmx :=
+Global Instance scale_seqmx : Op.scale_of A seqmx :=
   fun x M => map (map (mul_op x)) M.
 
 (* Inlining of && should provide lazyness here. *)
@@ -166,7 +166,7 @@ Fixpoint eq_seq T f (s1 s2 : seq T) :=
   | _, _ => false
   end.
 
-Global Instance eq_seqmx : eq_of (@seqmx A) := eq_seq (eq_seq eq_op).
+Global Instance eq_seqmx : Op.eq_of (@seqmx A) := eq_seq (eq_seq eq_op).
 
 Global Instance top_left_seqmx : top_left_of seqmx A :=
   fun (M : seqmx) => nth 0%C (nth [::] M 0) 0.
@@ -269,9 +269,9 @@ Section seqmx_more_op.
 
 Variable R : ringType.
 Context (C : Type).
-Context `{zero_of C, eq_of C, spec_of C R}.
+Context `{Op.zero_of C, Op.eq_of C, Op.spec_of C R}.
 
-Global Instance spec_seqmx m n : spec_of (@seqmx C) 'M[R]_(m, n) :=
+Global Instance spec_seqmx m n : Op.spec_of (@seqmx C) 'M[R]_(m, n) :=
   fun s =>
     if (s == seqmx0 m n)%C then 0 else
       matrix_of_fun matrix_key (fun (i : 'I_m) (j : 'I_n) =>
@@ -287,16 +287,16 @@ Section seqmx.
 
 Variable R : ringType.
 
-Local Instance zeroR : zero_of R := 0%R.
-Local Instance oneR  : one_of R := 1%R.
-Local Instance oppR  : opp_of R := -%R.
-Local Instance addR  : add_of R := +%R.
-Local Instance mulR  : mul_of R := *%R.
-Local Instance eqR   : eq_of R   := eqtype.eq_op.
-Local Instance specR : spec_of R R := spec_id.
+Local Instance zeroR : Op.zero_of R := 0%R.
+Local Instance oneR  : Op.one_of R := 1%R.
+Local Instance oppR  : Op.opp_of R := -%R.
+Local Instance addR  : Op.add_of R := +%R.
+Local Instance mulR  : Op.mul_of R := *%R.
+Local Instance eqR   : Op.eq_of R   := eqtype.eq_op.
+Local Instance specR : Op.spec_of R R := Op.spec_id.
 
-Local Instance implem_ord : forall n, (implem_of 'I_n 'I_n) :=
-  fun _ => implem_id.
+Local Instance implem_ord : forall n, (Op.implem_of 'I_n 'I_n) :=
+  fun _ => Op.implem_id.
 
 Local Open Scope rel_scope.
 
@@ -324,7 +324,7 @@ Proof.
     move=> i ltim.
     by rewrite (nth_map (Ordinal ltim)) !size_map ord_enum_eqE size_enum_ord.
   move=> i j.
-  rewrite mxE /seqmx_of_fun !ord_enum_eqE /implem /implem_ord /implem_id.
+  rewrite mxE /seqmx_of_fun !ord_enum_eqE /implem /implem_ord /Op.implem_id.
   rewrite !map_id (nth_map i) ?size_enum_ord // nth_ord_enum.
   rewrite (nth_map j) ?size_enum_ord // nth_ord_enum.
   apply refinesP; eapply refines_apply.
@@ -784,14 +784,11 @@ Proof.
   rewrite big_ord_recl -(ih (drsubmx (M : 'M_(1 + n1, 1 + n1)))).
     have <- : M ord0 ord0 = top_left_seqmx sM.
       apply refinesP; rewrite -[M _ _]/((fun (M : 'M_(_)) => M _ _) _).
-      eapply refines_apply.
-        apply Rseqmx_top_left_seqmx.
-      rewrite refinesE; eassumption.
+      exact: refines_apply.
     apply: congr2=> //; apply eq_bigr=> i _.
     by rewrite -[in LHS](@submxK R 1 n1 1 n1 M) -zmodp.rshift1
                [LHS](@block_mxEdr R 1 n1 1 n1).
-  apply refinesP; eapply refines_apply.
-    apply Rseqmx_drsubseqmx.
+  apply refinesP. eapply refines_apply; tc.
   rewrite refinesE.
   have H : nat_R_S_R rn = addn_R (nat_R_S_R nat_R_O_R) rn by [].
   rewrite H in rM.
@@ -822,10 +819,10 @@ Proof.
 Qed.
 
 Instance Rseqmx_spec_l m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
-  refines (Rseqmx rm rn ==> Logic.eq) spec_id spec.
+  refines (Rseqmx rm rn ==> Logic.eq) Op.spec_id spec.
 Proof.
   rewrite refinesE=> _ _ [M sM h1 h2 h3].
-  rewrite /spec /spec_seqmx /spec_id /spec /specR /spec_id /map_seqmx map_id_in;
+  rewrite /spec /spec_seqmx /Op.spec_id /spec /specR /Op.spec_id /map_seqmx map_id_in;
     last first.
     by move=> x; rewrite map_id.
   apply/matrixP=> i j.
@@ -850,17 +847,17 @@ Section seqmx_param.
 Context (C : Type) (rAC : R -> C -> Type).
 Context (I : nat -> Type)
         (rI : forall n1 n2, nat_R n1 n2 -> 'I_n1 -> I n2 -> Type).
-Context `{zero_of C, one_of C, opp_of C, add_of C, mul_of C, eq_of C}.
-Context `{spec_of C R}.
-Context `{forall n, implem_of 'I_n (I n)}.
+Context `{Op.zero_of C, Op.one_of C, Op.opp_of C, Op.add_of C, Op.mul_of C, Op.eq_of C}.
+Context `{Op.spec_of C R}.
+Context `{forall n, Op.implem_of 'I_n (I n)}.
 Context `{!refines rAC 0%R 0%C, !refines rAC 1%R 1%C}.
 Context `{!refines (rAC ==> rAC) -%R -%C}.
 Context `{!refines (rAC ==> rAC ==> rAC) +%R +%C}.
 Context `{!refines (rAC ==> rAC ==> rAC) *%R *%C}.
 Context `{!refines (rAC ==> rAC ==> bool_R) eqtype.eq_op eq_op}.
-Context `{!refines (rAC ==> Logic.eq) spec_id spec}.
+Context `{!refines (rAC ==> Logic.eq) Op.spec_id spec}.
 Context `{forall n1 n2 (rn : nat_R n1 n2),
-             refines (ordinal_R rn ==> rI rn) implem_id implem}.
+             refines (ordinal_R rn ==> rI rn) Op.implem_id implem}.
 
 Definition RseqmxC {m1 m2} (rm : nat_R m1 m2) {n1 n2} (rn : nat_R n1 n2) :
   'M[R]_(m1, n1) -> hseqmx m2 n2 -> Type :=
@@ -892,7 +889,7 @@ Global Instance RseqmxC_seqmx_of_fun m1 m2 (rm : nat_R m1 m2) n1 n2
        (rn : nat_R n1 n2) f g
        `{forall x y, refines (rI rm) x y ->
          forall z t, refines (rI rn) z t ->
-         refines (rAC \o (@unify _)) (f x z) (g y t)} :
+         refines_ RefinesKeys.unif rAC (f x z) (g y t)} :
   refines (RseqmxC rm rn)
           (\matrix_(i, j) f i j) (seqmx_of_fun (I:=I) g).
 Proof.
@@ -900,13 +897,13 @@ Proof.
   rewrite refinesE.
   eapply (seqmx_of_fun_R (I_R:=rI))=> // *; apply refinesP.
     eapply refines_apply; tc.
-  eapply refines_comp_unify; tc.
+  by rewrite (@refines_change RefinesKeys.unif); tc.
 Qed.
 
 Global Instance refine_seqmx_of_fun m n f g
        `{forall x y, refines (rI (nat_Rxx m)) x y ->
          forall z t, refines (rI (nat_Rxx n)) z t ->
-         refines (rAC \o (@unify _)) (f x z) (g y t)} :
+         refines_ RefinesKeys.unif rAC (f x z) (g y t)} :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n))
           (\matrix_(i, j) f i j) (seqmx_of_fun (I:=I) g).
 Proof. exact: RseqmxC_seqmx_of_fun. Qed.
@@ -1246,7 +1243,7 @@ Global Instance refine_copid_seqmx m r :
 Proof. apply RseqmxC_copid_seqmx; exact: nat_Rxx. Qed.
 
 Global Instance RseqmxC_spec m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
-  refines (RseqmxC rm rn ==> Logic.eq) spec_id spec.
+  refines (RseqmxC rm rn ==> Logic.eq) Op.spec_id spec.
 Proof.
   eapply refines_trans; tc.
   rewrite refinesE /spec /spec_seqmx /spec /specR=> l l' rl.
@@ -1270,7 +1267,7 @@ Proof.
 Qed.
 
 Global Instance refine_spec_seqmx m n :
-  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> Logic.eq) spec_id spec.
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> Logic.eq) Op.spec_id spec.
 Proof. exact: RseqmxC_spec. Qed.
 
 End seqmx_param.
@@ -1322,9 +1319,9 @@ Variable R : ringType.
 Context (C : Type) (rAC : R -> C -> Type).
 Context (polyC : Type) (RpolyC : {poly R} -> polyC -> Type).
 Variable polyX : polyC.
-Context `{zero_of polyC, one_of polyC, add_of polyC, mul_of polyC,
-          opp_of polyC}.
-Context `{cast_of C polyC}.
+Context `{Op.zero_of polyC, Op.one_of polyC, Op.add_of polyC, Op.mul_of polyC,
+          Op.opp_of polyC}.
+Context `{Op.cast_of C polyC}.
 Context `{!refines RpolyC 'X polyX}.
 Context `{!refines RpolyC 0 0%C, !refines RpolyC 1 1%C}.
 Context `{!refines (RpolyC ==> RpolyC ==> RpolyC) +%R +%C}.
@@ -1394,7 +1391,7 @@ Definition Maddm : 'M[int]_(2) := \matrix_(i, j < 2) (i + j * i)%:Z.
 
 Goal (Maddm == Maddm).
 by coqeal.
-Abort.
+Qed.
 
 Definition M3 : 'M[int]_(2,2) := \matrix_(i,j < 2) 3%:Z.
 Definition Mn3 : 'M[int]_(2,2) := \matrix_(i,j < 2) - 3%:Z.
@@ -1404,7 +1401,7 @@ Definition V : 'rV[int]_(3) := \matrix_(i < 1, j < 3) 3%:Z.
 
 Goal (diag_mx V == 2%:Z *: diag_mx V - diag_mx V).
 by coqeal.
-Abort.
+Qed.
 
 Goal (delta_mx ord0 ord0 + delta_mx (Ordinal (ltnSn 1)) (Ordinal (ltnSn 1)) ==
       1 :> 'M[{poly int}]_(2)).
@@ -1424,7 +1421,7 @@ by coqeal.
 Abort.
 
 Goal (M3 + M3 == M6).
-rewrite -[X in X == _]/(spec_id _) [spec_id _]refines_eq /=.
+rewrite -[X in X == _]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
 by coqeal.
 Abort.
 
@@ -1448,7 +1445,6 @@ Goal (M + N + M + N + M + N + N + M + N) *m
   (P *m M + P *m N + P *m M + P *m N +
    P *m M + P *m N + P *m N + P *m M + P *m N).
 Proof.
-apply/eqP.
 Time by coqeal.
 Abort.
 

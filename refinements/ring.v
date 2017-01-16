@@ -9,7 +9,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import GRing.Theory Pdiv.Ring Pdiv.CommonRing Pdiv.RingMonic.
-Import Refinements.Op Poly.Op.
+Import Refinements Poly.
 
 Local Open Scope ring_scope.
 

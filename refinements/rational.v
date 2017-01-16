@@ -18,7 +18,7 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 
-Import GRing.Theory Num.Theory Refinements.Op.
+Import GRing.Theory Num.Theory Refinements.
 
 (*************************************************************)
 (* PART I: Defining datastructures and programming with them *)
@@ -35,37 +35,37 @@ Section Q_ops.
 
 Local Open Scope computable_scope.
 
-Context `{zero_of Z, one_of Z, add_of Z, opp_of Z, mul_of Z, eq_of Z, leq_of Z,
-          lt_of Z}.
-Context `{one_of P, sub_of P, add_of P, mul_of P, eq_of P, leq_of P, lt_of P}.
-Context `{cast_of P Z, cast_of Z P}.
-Context `{spec_of Z int, spec_of P pos, spec_of N nat}.
+Context `{Op.zero_of Z, Op.one_of Z, Op.add_of Z, Op.opp_of Z, Op.mul_of Z, Op.eq_of Z, Op.leq_of Z,
+          Op.lt_of Z}.
+Context `{Op.one_of P, Op.sub_of P, Op.add_of P, Op.mul_of P, Op.eq_of P, Op.leq_of P, Op.lt_of P}.
+Context `{Op.cast_of P Z, Op.cast_of Z P}.
+Context `{Op.spec_of Z int, Op.spec_of P pos, Op.spec_of N nat}.
 
-Global Instance zeroQ : zero_of Q := (0, 1).
-Global Instance oneQ  : one_of Q  := (1, 1).
-Global Instance addQ  : add_of Q  := fun x y =>
+Global Instance zeroQ : Op.zero_of Q := (0, 1).
+Global Instance oneQ  : Op.one_of Q  := (1, 1).
+Global Instance addQ  : Op.add_of Q  := fun x y =>
   (x.1 * cast y.2 + y.1 * cast x.2, x.2 * y.2).
-Global Instance mulQ  : mul_of Q  := fun x y => (x.1 * y.1, x.2 * y.2).
-Global Instance oppQ  : opp_of Q  := fun x   => (- x.1, x.2).
-Global Instance eqQ   : eq_of Q   :=
+Global Instance mulQ  : Op.mul_of Q  := fun x y => (x.1 * y.1, x.2 * y.2).
+Global Instance oppQ  : Op.opp_of Q  := fun x   => (- x.1, x.2).
+Global Instance eqQ   : Op.eq_of Q   :=
   fun x y => (x.1 * cast y.2 == y.1 * cast x.2).
-Global Instance leqQ  : leq_of Q  :=
+Global Instance leqQ  : Op.leq_of Q  :=
   fun x y => (x.1 * cast y.2 <= y.1 * cast x.2).
-Global Instance ltQ   : lt_of Q   :=
+Global Instance ltQ   : Op.lt_of Q   :=
   fun x y => (x.1 * cast y.2 < y.1 * cast x.2).
-Global Instance invQ : inv_of Q   := fun x   =>
+Global Instance invQ : Op.inv_of Q   := fun x   =>
   if      (x.1 == 0)%C   then 0
   else if (0 < x.1)      then (cast x.2, cast x.1)
                          else (- (cast x.2), cast (- x.1)).
-Global Instance subQ : sub_of Q   := fun x y => (x + - y).
-Global Instance divQ : div_of Q   := fun x y => (x * y^-1).
-Global Instance expQnat : exp_of Q N := fun x n => iter (spec n) (mulQ x) 1.
-Global Instance specQ : spec_of Q rat :=
+Global Instance subQ : Op.sub_of Q   := fun x y => (x + - y).
+Global Instance divQ : Op.div_of Q   := fun x y => (x * y^-1).
+Global Instance expQnat : Op.exp_of Q N := fun x n => iter (spec n) (mulQ x) 1.
+Global Instance specQ : Op.spec_of Q rat :=
   fun q => (spec q.1)%:~R / (cast (spec q.2 : pos))%:R.
 
 (* Embedding from Z to Q *)
-Global Instance cast_ZQ : cast_of Z Q := fun x => (x, 1).
-Global Instance cast_PQ : cast_of P Q := fun x => cast (cast x : Z).
+Global Instance cast_ZQ : Op.cast_of Z Q := fun x => (x, 1).
+Global Instance cast_PQ : Op.cast_of P Q := fun x => cast (cast x : Z).
 
 End Q_ops.
 End Q.
@@ -94,21 +94,21 @@ Arguments specQ / _ _ _ _ _ : assert.
 (***********************************************************)
 Section Qint.
 
-Instance zero_int : zero_of int     := 0%R.
-Instance one_int  : one_of int      := 1%R.
-Instance add_int  : add_of int      := +%R.
-Instance opp_int  : opp_of int      := -%R.
-Instance mul_int  : mul_of int      := *%R.
-Instance eq_int   : eq_of int       := eqtype.eq_op.
-Instance leq_int  : leq_of int      := Num.le.
-Instance lt_int   : lt_of int       := Num.lt.
-Instance spec_int : spec_of int int := spec_id.
+Instance zero_int : Op.zero_of int     := 0%R.
+Instance one_int  : Op.one_of int      := 1%R.
+Instance add_int  : Op.add_of int      := +%R.
+Instance opp_int  : Op.opp_of int      := -%R.
+Instance mul_int  : Op.mul_of int      := *%R.
+Instance eq_int   : Op.eq_of int       := eqtype.eq_op.
+Instance leq_int  : Op.leq_of int      := Num.le.
+Instance lt_int   : Op.lt_of int       := Num.lt.
+Instance spec_int : Op.spec_of int int := Op.spec_id.
 
-Instance cast_pos_int : cast_of pos int := pos_to_int.
-Instance cast_int_pos : cast_of int pos := int_to_pos.
-Instance spec_pos     : spec_of pos pos := spec_id.
+Instance cast_pos_int : Op.cast_of pos int := pos_to_int.
+Instance cast_int_pos : Op.cast_of int pos := int_to_pos.
+Instance spec_pos     : Op.spec_of pos pos := Op.spec_id.
 
-Instance spec_nat : spec_of nat nat := spec_id.
+Instance spec_nat : Op.spec_of nat nat := Op.spec_id.
 
 Local Notation Qint := (Q int pos).
 
@@ -126,12 +126,12 @@ Local Open Scope rel_scope.
 
 Definition Rrat : rat -> Q int pos -> Type := fun_hrel Qint_to_rat.
 
-Instance Rrat_spec : refines (Rrat ==> Logic.eq) spec_id spec.
+Instance Rrat_spec : refines (Rrat ==> Logic.eq) Op.spec_id spec.
 Proof. by rewrite refinesE=> _ x <-. Qed.
 
 Lemma RratE (x : rat) (a : Qint) :
   refines Rrat x a -> x = a.1%:~R / (val a.2)%:~R.
-Proof. by move=> rxa; rewrite -[x]/(spec_id _) [spec_id _]refines_eq. Qed.
+Proof. by move=> rxa; rewrite -[x]/(Op.spec_id _) [Op.spec_id _]refines_eq. Qed.
 
 (* We establish the correction of Q int with regard to rat *)
 Instance Rrat_0 : refines Rrat 0 0%C.
@@ -270,11 +270,11 @@ Local Notation Q := (Q Z P).
 
 Definition RratC : rat -> Q -> Type := (Rrat \o prod_R Rint Rpos)%rel.
 
-Context `{zero_of Z, one_of Z, add_of Z, opp_of Z, sub_of Z, mul_of Z, eq_of Z,
-          leq_of Z, lt_of Z}.
-Context `{one_of P, sub_of P, add_of P, mul_of P, eq_of P, leq_of P, lt_of P}.
-Context `{cast_of P Z, cast_of Z P}.
-Context `{spec_of Z int, spec_of P pos, spec_of N nat}.
+Context `{Op.zero_of Z, Op.one_of Z, Op.add_of Z, Op.opp_of Z, Op.sub_of Z, Op.mul_of Z, Op.eq_of Z,
+          Op.leq_of Z, Op.lt_of Z}.
+Context `{Op.one_of P, Op.sub_of P, Op.add_of P, Op.mul_of P, Op.eq_of P, Op.leq_of P, Op.lt_of P}.
+Context `{Op.cast_of P Z, Op.cast_of Z P}.
+Context `{Op.spec_of Z int, Op.spec_of P pos, Op.spec_of N nat}.
 
 Context `{!refines Rint 0%R 0%C, !refines Rint 1%R 1%C}.
 Context `{!refines (Rint ==> Rint) -%R -%C}.
@@ -286,7 +286,7 @@ Context `{!refines (Rint ==> Rint ==> bool_R) Num.le leq_op}.
 Context `{!refines (Rint ==> Rint ==> bool_R) Num.lt lt_op}.
 Context `{!refines (Rpos ==> Rint) cast cast}.
 Context `{!refines (Rint ==> Rpos) cast cast}.
-Context `{!refines (Rint ==> Logic.eq) spec_id spec}.
+Context `{!refines (Rint ==> Logic.eq) Op.spec_id spec}.
 
 Context `{!refines Rpos pos1 1%C}.
 Context `{!refines (Rpos ==> Rpos ==> Rpos) add_pos +%C}.
@@ -294,9 +294,9 @@ Context `{!refines (Rpos ==> Rpos ==> Rpos) mul_pos *%C}.
 Context `{!refines (Rpos ==> Rpos ==> bool_R) eqtype.eq_op eq_op}.
 Context `{!refines (Rpos ==> Rpos ==> bool_R) leq_pos leq_op}.
 Context `{!refines (Rpos ==> Rpos ==> bool_R) lt_pos lt_op}.
-Context `{!refines (Rpos ==> Logic.eq) spec_id spec}.
+Context `{!refines (Rpos ==> Logic.eq) Op.spec_id spec}.
 
-Context `{!refines (Rnat ==> nat_R) spec_id spec}.
+Context `{!refines (Rnat ==> nat_R) Op.spec_id spec}.
 
 Global Instance RratC_zeroQ : refines RratC 0 0%C.
 Proof. param_comp zeroQ_R. Qed.
@@ -348,12 +348,10 @@ Proof. param_comp leqQ_R. Qed.
 Global Instance RratC_ltQ : refines (RratC ==> RratC ==> bool_R) Num.lt lt_op.
 Proof. param_comp ltQ_R. Qed.
 
-Global Instance RratC_spec : refines (RratC ==> Logic.eq) spec_id spec.
+Global Instance RratC_spec : refines (RratC ==> Logic.eq) Op.spec_id spec.
 Proof.
-  eapply refines_trans; tc.
-  rewrite refinesE -[Rint]refinesE -[Rpos]refinesE; move=> x y rxy.
-  case: rxy=> i j rij p q rpq.
-  by rewrite /spec /specQ /spec_int /spec_pos /= ![spec_id _]refines_eq.
+  refines_trans; rewrite refinesE => x y [i j rij p q rpq].
+  by rewrite /spec_int /spec_pos /= ![Op.spec_id _]refines_eq.
 Qed.
 
 End Qparametric.

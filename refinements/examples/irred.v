@@ -17,7 +17,7 @@ Unset Printing Implicit Defensive.
 Import GRing.Theory.
 Import FinRing.Theory.
 Import Pdiv.Field.
-Import Refinements.Op Poly.Op.
+Import Refinements Poly.
 Local Open Scope ring_scope.
 
 Section npoly.
@@ -167,25 +167,25 @@ End Irreducible.
 
 Module nat_ops.
 
-Instance zero_nat : zero_of nat := 0%N.
-Instance one_nat  : one_of nat  := 1%N.
-Instance add_nat  : add_of nat  := addn.
-Instance sub_nat  : sub_of nat  := subn.
-Instance mul_nat  : mul_of nat  := muln.
-Instance exp_nat  : exp_of nat nat := expn.
-Instance leq_nat  : leq_of nat  := ssrnat.leq.
-Instance lt_nat   : lt_of nat  := ssrnat.ltn.
-Instance eq_nat   : eq_of nat   := eqtype.eq_op.
+Instance zero_nat : Op.zero_of nat := 0%N.
+Instance one_nat  : Op.one_of nat  := 1%N.
+Instance add_nat  : Op.add_of nat  := addn.
+Instance sub_nat  : Op.sub_of nat  := subn.
+Instance mul_nat  : Op.mul_of nat  := muln.
+Instance exp_nat  : Op.exp_of nat nat := expn.
+Instance leq_nat  : Op.leq_of nat  := ssrnat.leq.
+Instance lt_nat   : Op.lt_of nat  := ssrnat.ltn.
+Instance eq_nat   : Op.eq_of nat   := eqtype.eq_op.
 
-Instance spec_nat : spec_of nat nat := spec_id.
+Instance spec_nat : Op.spec_of nat nat := Op.spec_id.
 
-Instance implem_nat : implem_of nat nat := implem_id.
+Instance implem_nat : Op.implem_of nat nat := Op.implem_id.
 
 End nat_ops.
 
 Section card.
 Context (T' : Type) (N : Type).
-Context (enumT' : seq T')  `{zero_of N} `{one_of N} `{add_of N}.
+Context (enumT' : seq T')  `{Op.zero_of N} `{Op.one_of N} `{Op.add_of N}.
 Definition card' (P' : pred T') : N := size_op [seq s <- enumT' | P' s].
 End card.
 Parametricity card'.
@@ -213,19 +213,20 @@ Context (T : finType) (T' : Type) (RT : T -> T' -> Type).
 Variable (N : Type) (rN : nat -> N -> Type).
 Context (enumT' : seq T')
   {enumR : refines (perm_eq \o (list_R RT)) (@Finite.enum T) enumT'}.
-Context `{zero_of N} `{one_of N} `{add_of N}.
+Context `{Op.zero_of N} `{Op.one_of N} `{Op.add_of N}.
 Context `{!refines rN 0%N 0%C}.
 Context `{!refines rN 1%N 1%C}.
 Context `{!refines (rN ==> rN ==> rN)%rel addn add_op}.
 Context (P : pred T) (P' : pred T').
 
 Global Instance refines_card :
-  (forall x x' `{!refines RT x x'}, refines (bool_R \o (@unify _)) (P x) (P' x')) ->
+  (forall x x' `{!refines RT x x'}, refines_ 'unify bool_R (P x) (P' x')) ->
   refines rN #|[pred x | P x]| (card' enumT' P').
 Proof.
-move=> RP; have := refines_comp_unify (RP _ _ _) => /refines_abstr => {RP} RP.
+rewrite !(refines_change 'recursive) => RP.
 have [s [rs1 rs2]] := refines_split2 enumR.
-by rewrite -card'E (@card'_perm _ _ s) //; param card'_R.
+rewrite -card'E (@card'_perm _ _ s) //; param card'_R.
+by refines_abstr; eapply RP.
 Qed.
 
 End enumerable.

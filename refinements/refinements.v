@@ -18,6 +18,11 @@ Local Open Scope rel.
 (* Shortcut for triggering typeclass resolution *)
 Ltac tc := do 1?typeclasses eauto.
 
+(* key type with scope *)
+Definition Key := unit.
+Delimit Scope key_scope with key.
+Bind Scope key_scope with Key.
+
 (**************************)
 (* Linking param and hrel *)
 (**************************)
@@ -108,21 +113,27 @@ Qed.
 (************************)
 
 Module Import RefinesKeys.
-Fact symbol : unit. Proof. done. Qed.
-Fact recursive : unit. Proof. done. Qed.
-Fact unif : unit. Proof. done. Qed.
+Fact symbol : Key. Proof. done. Qed.
+Fact recursive : Key. Proof. done. Qed.
+Fact unif : Key. Proof. done. Qed.
 End RefinesKeys.
+
+Notation "'symbol" := symbol : key_scope.
+Notation "'recursive" := recursive : key_scope.
+Notation "'unify" := unif : key_scope.
+
+Implicit Types (key : Key).
 
 Class refines_ key A B (R : A -> B -> Type) (m : A) (n : B) :=
   refines_rel : (locked_with key R) m n.
-Arguments refines_ key {A B} R%rel m n : simpl never.
+Arguments refines_ key%key {A B} R%rel m n : simpl never.
 Hint Mode refines_ + - - - + - : typeclass_instances.
 
 Lemma refinesE key A B (R : A -> B -> Type) : refines_ key R = R.
 Proof. by rewrite /refines_ unlock. Qed.
 
 Section refinements.
-Variable key : unit.
+Variable key : Key.
 Notation refines := (@refines_ key _ _).
 
 Lemma refines_eq_ T (x y : T) : refines eq x y -> x = y.
@@ -234,13 +245,13 @@ else (tryif eapply refines_apply then idtac (* "no shortcut" *)
    else (once lazymatch goal with |- ?g
        => idtac "cannot find refinement for" g end; fail 1)).
 
-Hint Extern 0 (refines_ recursive _ _ _) =>
+Hint Extern 0 (refines_ 'recursive _ _ _) =>
   refines_symbol : typeclass_instances.
 
-Hint Extern 0 (refines_ symbol _ _ _)
+Hint Extern 0 (refines_ 'symbol _ _ _)
   => apply trivial_refines; eassumption : typeclass_instances.
 
-Global Instance refines_unify A B (R : A -> B -> Type) x y' y :
+Global Instance refines_trans_unify A B (R : A -> B -> Type) x y' y :
   refines_ recursive R x y' -> @unify B y' y -> refines_ unif R x y.
 Proof. by rewrite !refinesE => ? <-. Qed.
 
@@ -257,10 +268,10 @@ Ltac param x :=
 (* Special tactic when relation is defined using \o *)
 Ltac param_comp x := eapply refines_trans; tc; param x.
 
-Notation refines := (@refines_ symbol _ _).
-Notation refines_in := (@refines_ recursive _ _).
+Notation refines := (@refines_ 'symbol _ _).
+Notation refines_in := (@refines_ 'recursive _ _).
 
-Notation refines_eq := (@refines_eq_ recursive _ _ _ _).
+Notation refines_eq := (@refines_eq_ 'recursive _ _ _ _).
 
 Section global_refinements.
 

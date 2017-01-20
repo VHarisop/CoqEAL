@@ -181,9 +181,7 @@ Parametricity add_hpoly.
 Parametricity sub_hpoly.
 Parametricity shift_hpoly.
 Parametricity mul_hpoly.
-Definition exp_hpoly' := Eval compute in @exp_hpoly.
-Parametricity exp_hpoly'.
-Realizer @exp_hpoly as exp_hpoly_R := exp_hpoly'_R.
+Parametricity exp_hpoly.
 Parametricity eq0_hpoly.
 Parametricity eq_hpoly.
 Parametricity size_hpoly.
@@ -265,7 +263,7 @@ Qed.
 
 End hpoly_more_op.
 
-Arguments spec_hpoly / _ _ _ _ _ _ _ _ _ _ _ : assert.
+Arguments spec_hpoly /.
 
 (******************************************************************************)
 (** PART II: Proving correctness properties of the previously defined objects *)
@@ -325,14 +323,10 @@ Qed.
 
 Definition Rhpoly : {poly A} -> hpoly A -> Type := fun_hrel to_poly.
 
-(* This is OK here, but not everywhere *)
-Instance refines_eq_refl A (x : A) : refines Logic.eq x x | 999.
-Proof. by rewrite refinesE. Qed.
-
 Lemma RhpolyE p q : refines Rhpoly p q -> p = to_poly q.
 Proof. by rewrite refinesE. Qed.
 
-Instance Rhpolyspec_r x : refines Rhpoly (to_poly x) x | 10000.
+Instance Rhpolyspec_r x : refines Rhpoly (to_poly x) x.
 Proof. by rewrite !refinesE; case: x. Qed.
 
 Fact normalize_lock : unit. Proof. exact tt. Qed.
@@ -878,7 +872,7 @@ by coqeal.
 Abort.
 
 Goal (1 + 2%:Z *: 'X + 3%:Z *: 'X^2 - (1 + 2%:Z *: 'X + 3%:Z *: 'X^2) == 0).
-by rewrite -[X in (X == _)]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
+by rewrite [X in X == 0](coqeal vm_compute).
 Abort.
 
 Goal ((1 + 2%:Z *: 'X) * (1 + 2%:Z%:P * 'X) == 1 + 4%:Z *: 'X + 4%:Z *: 'X^2).
@@ -887,7 +881,7 @@ Abort.
 
 (* (1 + xy) * x = x + x^2y *)
 Goal ((1 + 'X * 'X%:P) * 'X == 'X + 'X^2 * 'X%:P :> {poly {poly int}}).
-rewrite -[X in (X == _)]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
+rewrite [X in X == _](coqeal vm_compute).
 by coqeal.
 Abort.
 

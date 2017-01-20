@@ -16,6 +16,10 @@ This archive is split in four parts:
 
 - doc, tools for generating documentation out of local documentation.
 
+Refinement library
+==================
+
+
 
 Authors
 =======

@@ -312,12 +312,10 @@ Qed.
 
 Global Instance Rnat_eq : refines (Rnat ==> Rnat ==> bool_R) eqtype.eq_op Op.eq.
 Proof.
-  rewrite refinesE=> _ x <- _ y <-; rewrite /eq_op /eq_N.
-  case: (N.eqb_spec _ _) => [->|/eqP hneq].
-    by rewrite eqxx.
-  suff H : (nat_of_bin x == nat_of_bin y) = false.
-    by rewrite H.
-  by apply/negP => [/eqP /(can_inj nat_of_binK)]; apply/eqP.
+rewrite refinesE=> _ x <- _ y <-; rewrite /eq_op /eq_N.
+case: (N.eqb_spec _ _) => [->|/eqP hneq]; first by rewrite eqxx.
+suff H : (nat_of_bin x == nat_of_bin y) = false by rewrite H.
+by apply/negP => [/eqP /(can_inj nat_of_binK)]; apply/eqP.
 Qed.
 
 Global Instance Rnat_leq : refines (Rnat ==> Rnat ==> bool_R) ssrnat.leq Op.leq.

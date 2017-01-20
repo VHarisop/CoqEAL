@@ -220,7 +220,7 @@ Context `{!refines (rN ==> rN ==> rN)%rel addn add_op}.
 Context (P : pred T) (P' : pred T').
 
 Global Instance refines_card :
-  (forall x x' `{!refines RT x x'}, refines_ 'unify bool_R (P x) (P' x')) ->
+  (forall x x' `{!refines RT x x'}, refines_unify bool_R (P x) (P' x')) ->
   refines rN #|[pred x | P x]| (card' enumT' P').
 Proof.
 rewrite !(refines_change 'recursive) => RP.
@@ -273,10 +273,19 @@ move=> /= p; symmetry; rewrite mem_enum inE /=.
 apply/mapP => /=; exists p; last first.
   apply/npolyP => i; rewrite coef_poly /= coef_Poly.
   by case: ltnP => // ?; rewrite big_coef_npoly.
+set extend := (fun e => e ++ _).
 elim: n => [|n IHn] in p *.
   rewrite inE; case: p => [p /=]; rewrite size_poly_leq0 => /eqP->.
   by rewrite polyseq0.
 rewrite /= mem_cat.
+case: p => /= p; rewrite leq_eqVlt => /orP[/eqP sp|]; last first.
+  by rewrite ltnS => sp; rewrite (IHn (Npolynomial sp)).
+apply/orP; right.
+apply/flattenP=> /=.
+exists [seq p`_0 :: i | i <- iter n extend [:: [::]]].
+  apply/mapP; eexists; last exact.
+  by rewrite -(perm_eq_mem Rs) mem_enum.
+apply/mapP.
 Admitted.
 
 Parametricity enum_npoly.
@@ -306,6 +315,7 @@ Proof.
 have [s [sP ?]] := refines_split2 enumR.
 eapply refines_trans; tc.
   by rewrite refinesE; apply/enum_npolyE/sP.
+
 param enum_npoly_R.
 
 Admitted.
@@ -325,7 +335,8 @@ Admitted.
 Section LaurentsProblem.
 
 Global Instance refines_predn : refines (Rnat ==> Rnat) predn (fun n => (n - 1)%C).
-Admitted.
+by refines_abstr; rewrite -subn1; apply: eq_spec_refines_.
+Qed.
 
 Lemma test_irred : irreducible_poly ('X^5 + 'X^2 + 1 : {poly 'F_2}).
 Proof.

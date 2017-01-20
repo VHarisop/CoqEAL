@@ -889,7 +889,7 @@ Global Instance RseqmxC_seqmx_of_fun m1 m2 (rm : nat_R m1 m2) n1 n2
        (rn : nat_R n1 n2) f g
        `{forall x y, refines (rI rm) x y ->
          forall z t, refines (rI rn) z t ->
-         refines_ RefinesKeys.unif rAC (f x z) (g y t)} :
+         refines_unify rAC (f x z) (g y t)} :
   refines (RseqmxC rm rn)
           (\matrix_(i, j) f i j) (seqmx_of_fun (I:=I) g).
 Proof.
@@ -897,13 +897,13 @@ Proof.
   rewrite refinesE.
   eapply (seqmx_of_fun_R (I_R:=rI))=> // *; apply refinesP.
     eapply refines_apply; tc.
-  by rewrite (@refines_change RefinesKeys.unif); tc.
+  by rewrite (@refines_change ('unify 'recursive)); tc.
 Qed.
 
 Global Instance refine_seqmx_of_fun m n f g
        `{forall x y, refines (rI (nat_Rxx m)) x y ->
          forall z t, refines (rI (nat_Rxx n)) z t ->
-         refines_ RefinesKeys.unif rAC (f x z) (g y t)} :
+         refines_unify rAC (f x z) (g y t)} :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n))
           (\matrix_(i, j) f i j) (seqmx_of_fun (I:=I) g).
 Proof. exact: RseqmxC_seqmx_of_fun. Qed.
@@ -1266,7 +1266,7 @@ Proof.
   by [].
 Qed.
 
-Global Instance refine_spec_seqmx m n :
+Global Instance refines_spec_seqmx m n :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> Logic.eq) Op.spec_id spec.
 Proof. exact: RseqmxC_spec. Qed.
 
@@ -1421,7 +1421,7 @@ by coqeal.
 Abort.
 
 Goal (M3 + M3 == M6).
-rewrite -[X in X == _]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
+rewrite [X in X == _](coqeal vm_compute).
 by coqeal.
 Abort.
 

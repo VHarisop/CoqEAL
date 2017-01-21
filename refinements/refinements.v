@@ -10,8 +10,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* Import GRing.Theory Pdiv.Ring Pdiv.CommonRing Pdiv.RingMonic. *)
-
 Delimit Scope computable_scope with C.
 Local Open Scope rel.
 
@@ -125,6 +123,14 @@ Notation "'unify key" := (RefinesKeys.unify key) (at level 0) : key_scope.
 (* Notation "'memoize key" := (RefinesKeys.memoize key) (at level 0) : key_scope. *)
 
 Implicit Types (key : Key).
+
+(* Registering the refinement relation *)
+
+Class refinement P (C : Type) (R : P -> C -> Type) := {}.
+Arguments refinement {P} {C} R.
+Hint Mode refinement + + - : typeclass_instances.
+
+(* Refines for a given relation *)
 
 Class refines_ key P C (R : P -> C -> Type) (p : P) (c : C) :=
   refines_rel : (locked_with key R) p c.
@@ -259,7 +265,7 @@ Ltac param x :=
 Ltac param_comp x := eapply refines_trans; tc; param x.
 
 Notation refines := (@refines_ 'symbol _ _).
-Notation refines_in := (@refines_ 'recursive _ _).
+Notation refines_rec := (@refines_ 'recursive _ _).
 Notation refines_unify := (@refines_ ('unify 'recursive) _ _).
 
 Notation refines_eq := (@refines_eq_ 'recursive _ _ _ _).
@@ -463,19 +469,19 @@ Ltac refines_abstr := do ![refines_abstr1].
 Ltac refines_trans :=  eapply refines_trans; tc.
 
 Lemma spec_refines_ key A B R a a' b `{Op.spec_of B A} :
-  refines_in (R ==> Logic.eq) Op.spec_id Op.spec ->
-  refines_in R a a' ->
-  refines_in R (Op.spec a') b -> refines_ key R a b.
+  refines_rec (R ==> Logic.eq) Op.spec_id Op.spec ->
+  refines_rec R a a' ->
+  refines_rec R (Op.spec a') b -> refines_ key R a b.
 Proof. by rewrite !refinesE /= => specP /specP <-. Qed.
 
 Lemma spec_refinesP_ key A B R a a' b `{Op.spec_of B A} :
-  refines_in (R ==> Logic.eq) Op.spec_id spec ->
-  refines_in R a a' ->
+  refines_rec (R ==> Logic.eq) Op.spec_id spec ->
+  refines_rec R a a' ->
   R (Op.spec a') b -> refines_ key R a b.
 Proof. by move=> *; apply/spec_refines_. Qed.
 
 Lemma eq_spec_refines_ key A B (R : A -> B -> Type) (a : A) (a' b : B) :
-  refines_in R a a' -> a' = b -> refines_ key R a b.
+  refines_rec R a a' -> a' = b -> refines_ key R a b.
 Proof. by rewrite !refinesE => Raa' <-. Qed.
 
 Definition spec_refines : forall A B R a a' b H, _ -> _ -> _ -> R a b :=
@@ -487,14 +493,8 @@ Definition eq_spec_refines : forall A B R a a' b, _ -> _ -> R a b :=
 
 Ltac refines_abstrE := refines_abstr; rewrite !refinesE.
 
-(* Registering the refinement relation *)
-
-Class refinement A {B : Type} (R : A -> B -> Type) := {}.
-Arguments refinement A {B} R.
-Hint Mode refinement + + - : typeclass_instances.
-
 (* Bool refinements *)
-Instance refinement_bool : refinement bool eq := {}.
+Instance refinement_bool : refinement bool_R := {}.
 
 Global Instance refines_pair_R
   A A' B B' (rA : A -> A' -> Type) (rB : B -> B' -> Type) :
@@ -510,7 +510,6 @@ Global Instance refines_snd_R
   A A' B B' (rA : A -> A' -> Type) (rB : B -> B' -> Type) :
   refines (prod_R rA rB ==> rB)%rel (@snd _ _) (@snd _ _).
 Proof. by rewrite !refinesE=> [??] [??]. Qed.
-
 
 Global Instance refines_true : refines bool_R true _ :=
   trivial_refines _ bool_R_true_R.

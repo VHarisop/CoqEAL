@@ -71,7 +71,7 @@ Qed.
 
 Local Instance refines_implem_eq A B (R : A -> B -> Type)
       `{Op.implem_of A B, !refines (Logic.eq ==> R) Op.implem_id implem} x y :
-  refines eq x y -> refines_in R x (implem y).
+  refines eq x y -> refines_rec R x (implem y).
 Proof.
   move=> eqxy.
   rewrite -[x]/(Op.implem_id _).

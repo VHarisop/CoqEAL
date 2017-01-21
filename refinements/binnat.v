@@ -214,7 +214,7 @@ Local Open Scope rel_scope.
 
 Definition Rnat : nat -> N -> Type := fun_hrel nat_of_bin.
 
-Lemma RnatE (n : nat) (x : N) : refines_in Rnat n x -> n = x.
+Lemma RnatE (n : nat) (x : N) : refines_rec Rnat n x -> n = x.
 Proof. by rewrite refinesE. Qed.
 
 Global Instance Rnat_spec_r x : refines Rnat (spec x) x.

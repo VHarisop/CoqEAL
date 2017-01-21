@@ -11,7 +11,7 @@ Section size_seq.
 
 Context (A : Type) (N : Type) `{Op.zero_of N} `{Op.one_of N} `{Op.add_of N}.
 
-Global Instance size_seq : Op.size_of (seq A) N := 
+Global Instance size_seq : Op.size_of (seq A) N :=
   fix size xs := if xs is x :: s then (size s + 1)%C else 0%C.
 
 End size_seq.
@@ -39,7 +39,7 @@ Global Instance refine_nth1 :
           nth (fun x s (n : N) => nth x s (spec n)).
 Proof.
   param nth_R.
-  rewrite -[X in refines_in _ X _]/(Op.spec_id _). 
+  rewrite -[X in refines_rec _ X _]/(Op.spec_id _).
   exact: refines_apply.
 Qed.
 
@@ -49,7 +49,7 @@ Global Instance refine_nth2 :
 Proof.
   param nth_R.
     rewrite refinesE; exact: list_R_nil_R.
-  rewrite -[X in refines_in _ X _]/(Op.spec_id _); exact: refines_apply.
+  rewrite -[X in refines_rec _ X _]/(Op.spec_id _); exact: refines_apply.
 Qed.
 
 Global Instance refine_list_R2_implem s :

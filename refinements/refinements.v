@@ -1,25 +1,16 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat div seq ssralg.
-(* Require Import path choice fintype tuple finset ssralg bigop poly polydiv. *)
-(* Require Import ssrint ZArith. *)
+Require Import String.
+Require Import ssrmatching.
 
 From CoqEAL Require Import hrel param.
-
-Require Import ssrmatching.
+From CoqEAL Require Export tclib.
+From CoqEAL Require Import ops.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Delimit Scope computable_scope with C.
 Local Open Scope rel.
-
-(* Shortcut for triggering typeclass resolution *)
-Ltac tc := do 1?typeclasses eauto.
-
-(* key type with scope *)
-Definition Key := unit.
-Delimit Scope key_scope with key.
-Bind Scope key_scope with Key.
 
 (**************************)
 (* Linking param and hrel *)
@@ -32,13 +23,6 @@ Proof. by case; split. Qed.
 Lemma prod_RI A A' B B' (rA : A -> A' -> Type) (rB : B -> B' -> Type) x y :
   prod_hrel rA rB x y -> prod_R rA rB x y.
 Proof. by move: x y => [x1 x2] [y1 y2] [] /=; constructor. Qed.
-
-(*****************************)
-(* General unification class *)
-(*****************************)
-
-Class unify A (x y : A) := unify_rel : x = y.
-Global Instance unifyxx A (x : A) : unify x x := erefl.
 
 (*********************************)
 (* Compositionality of relations *)
@@ -114,28 +98,45 @@ Module RefinesKeys.
 Fact symbol : Key. Proof. done. Qed.
 Fact recursive : Key. Proof. done. Qed.
 Fact unify : Key -> Key. Proof. done. Qed.
+Fact eq : Key. Proof. done. Qed.
 (* Fact memoize : Key -> Key. Proof. done. Qed. *)
 End RefinesKeys.
 
 Notation "'symbol" := RefinesKeys.symbol : key_scope.
 Notation "'recursive" := RefinesKeys.recursive : key_scope.
 Notation "'unify key" := (RefinesKeys.unify key) (at level 0) : key_scope.
+Notation "'eq" := (RefinesKeys.eq) (at level 0) : key_scope.
 (* Notation "'memoize key" := (RefinesKeys.memoize key) (at level 0) : key_scope. *)
 
 Implicit Types (key : Key).
 
 (* Registering the refinement relation *)
 
-Class refinement P (C : Type) (R : P -> C -> Type) := {}.
-Arguments refinement {P} {C} R.
-Hint Mode refinement + + - : typeclass_instances.
+Class refinement (P C : Type) (R : P -> C -> Type) := {}.
+Arguments refinement P C R : clear implicits.
+Hint Mode refinement + - - : typeclass_instances.
+Notation "'refinement R" := (refinement _ _ R) (at level 1, only parsing).
+
+Instance refinement_pair (P P' C C' : Type)
+  (R : P -> C -> Type) (R' : P' -> C' -> Type) :
+  'nobacktrack ('refinement R) -> 'nobacktrack ('refinement R') ->
+  'refinement (prod_R R R').
+
+Instance refinement_fun (P P' C C' : Type)
+  (R : P -> C -> Type) (R' : P' -> C' -> Type) :
+  'refinement R -> 'refinement R' -> 'refinement (R ==> R').
+
+(* Hint Extern 999 (refinement _ _ _) => *)
+(* (once lazymatch goal with |- ?g =>  *)
+(*        idtac "failed " g; fail 1 end) *)
+(*  : typeclass_instances. *)
 
 (* Refines for a given relation *)
 
 Class refines_ key P C (R : P -> C -> Type) (p : P) (c : C) :=
   refines_rel : (locked_with key R) p c.
 Arguments refines_ key%key {P C} R%rel p c%C : simpl never.
-Hint Mode refines_ + - - - + - : typeclass_instances.
+Hint Mode refines_ - - + - + - : typeclass_instances.
 
 Lemma refinesE key A B (R : A -> B -> Type) : refines_ key R = R.
 Proof. by rewrite /refines_ unlock. Qed.
@@ -187,11 +188,22 @@ Proof. by rewrite !refinesE. Qed.
 
 End refines_split.
 
-Lemma refines_apply
-  A B (R : A -> B -> Type) C D (R' : C -> D -> Type) :
-  forall (c : A -> C) (d : B -> D), refines (R ==> R') c d ->
-  forall (a : A) (b : B), refines R a b -> refines R' (c a) (d b).
-Proof. by rewrite !refinesE => c d rcd a b rab; apply: rcd. Qed.
+Lemma refines_apply r1 r2 r3
+  A B (R : A -> B -> Type) 
+  {R_is_refinement : nobacktrack tt r1 true
+   "refines_apply cannot find" ('refinement R)}
+  C D (R' : C -> D -> Type) :
+  forall (c : A -> C) (d : B -> D), 
+  nobacktrack r1 r2 false "" (refines (R ==> R') c d) ->
+  forall (a : A) (b : B), 
+  nobacktrack r2 r3 false "" (refines R a b) ->
+  refines R' (c a) (d b).
+Proof.
+rewrite !refinesE.
+move=> c d; rewrite nobacktrackE => rcd.
+move=> a b; rewrite nobacktrackE => rab.
+exact: rcd.
+Qed.
 
 (* Composable and pairs *)
 Lemma refines_prod_R A A' B B' (rA : A -> A' -> Type) (rB : B -> B' -> Type) x y :
@@ -201,24 +213,21 @@ Proof. by rewrite !refinesE => *; apply: prod_RI; split. Qed.
 
 Lemma refines_abstr A B C D (R : A -> B -> Type) (R' : C -> D -> Type)
       (c : A -> C) (d : B -> D):
-        (forall (a :  A) (b : B), refines R a b -> refines R' (c a) (d b)) ->
+        (forall (a :  A) (b : B), R a b -> refines R' (c a) (d b)) ->
         refines (R ==> R') c d.
 Proof. by rewrite !refinesE; apply. Qed.
+Ltac refines_abstr1 := eapply refines_abstr=> ???.
+Ltac refines_abstr := do ![refines_abstr1].
+Ltac refines_abstrE := refines_abstr; rewrite !refinesE.
 
 Lemma refines_abstr2 A B A' B' A'' B''
       (R : A -> B -> Type) (R' : A' -> B' -> Type) (R'' : A'' -> B'' -> Type)
       (f : A -> A' -> A'' ) (g : B -> B' -> B''):
-        (forall (a : A)   (b : B), refines R a b ->
-         forall (a' : A') (b' : B'), refines R' a' b' ->
+        (forall (a : A)   (b : B), R a b ->
+         forall (a' : A') (b' : B'), R' a' b' ->
         refines R'' (f a a') (g b b')) ->
         refines (R ==> R' ==> R'') f g.
-Proof. by move=> H; do 2![eapply refines_abstr => *]; apply: H. Qed.
-
-Global Instance refines_bool_eq x y : refines bool_R x y -> refines eq x y.
-Proof. by rewrite !refinesE=> [[]]. Qed.
-
-Global Instance refines_nat_eq x y : refines nat_R x y -> refines eq x y.
-Proof. rewrite !refinesE; exact: nat_R_eq. Qed.
+Proof. by move=> H; refines_abstr; apply: H. Qed.
 
 End refinements.
 
@@ -237,139 +246,60 @@ Lemma refines_change key2 key1 A B (R : A -> B -> Type) :
   refines_ key1 R = refines_ key2 R.
 Proof. by rewrite !refinesE. Qed.
 
+Lemma refines_subst key1 key2 A B (R : A -> B -> Type) x y :
+  refines_ key1 R x y -> refines_ key2 R x y.
+Proof. by rewrite !refinesE. Qed.
+
 Ltac refines_symbol :=
 (* (once lazymatch goal with |- ?g => idtac "trying " g end); *)
-tryif by [rewrite (@refines_change 'symbol); typeclasses eauto] then idtac
+tryif exact: (@refines_subst 'symbol) then idtac
 else (tryif eapply refines_apply then idtac (* "no shortcut" *)
    else (once lazymatch goal with |- ?g
        => idtac "cannot find refinement for" g end; fail 1)).
 
-Hint Extern 0 (refines_ 'recursive _ _ _) =>
-  refines_symbol : typeclass_instances.
+Hint Extern 0 (refines_ 'recursive _ _ _)
+  => refines_symbol : typeclass_instances.
 
 Hint Extern 0 (refines_ 'symbol _ _ _)
   => apply trivial_refines; eassumption : typeclass_instances.
 
-Global Instance refines_trans_unify key A B (R : A -> B -> Type) x y' y :
-  refines_ key R x y' -> @unify B y' y -> refines_ ('unify key) R x y.
-Proof. by rewrite !refinesE => ? <-. Qed.
-
-(* Tactic for doing parametricity proofs, it takes a parametricity
-   theorem generated by the Parametricity plugin as argument *)
-Ltac param x :=
-  rewrite ?refinesE; do?move=> ?*;
-  eapply x=> *; eapply refinesP;
-  do ?eapply refines_apply; tc.
-
-(* Special tactic when relation is defined using \o *)
-Ltac param_comp x := eapply refines_trans; tc; param x.
+Global Instance refines_trans_unify key A B (R : A -> B -> Type) x y :
+  unify1 (refines_ key R x) y -> refines_ ('unify key) R x y.
+Proof. by rewrite unify1E !refinesE. Qed.
 
 Notation refines := (@refines_ 'symbol _ _).
 Notation refines_rec := (@refines_ 'recursive _ _).
 Notation refines_unify := (@refines_ ('unify 'recursive) _ _).
 
-Notation refines_eq := (@refines_eq_ 'recursive _ _ _ _).
+(* Notation refines_eq := (@refines_eq_ 'eq _ _ _). *)
+
+(* Global Instance refines_bool_eq x y : refines bool_R x y -> refines_ 'eq eq x y. *)
+(* Proof. by rewrite !refinesE=> [[]]. Qed. *)
+
+(* Global Instance refines_nat_eq x y : refines nat_R x y -> refines_ 'eq eq x y. *)
+(* Proof. rewrite !refinesE; exact: nat_R_eq. Qed. *)
 
 Lemma refines_goal (G G' : Type) :
   refines (fun T T' => T' -> T) G G' -> G' -> G.
 Proof. by rewrite refinesE. Qed.
 
+Definition spec_id {A : Type} : A -> A := id.
+
 Module Refinements.
 
-(* Generic operations *)
+Export ops.
+
+(* Generic spec *)
 Module Op.
-
-Class zero_of A := zero : A.
-Hint Mode zero_of + : typeclass_instances.
-Class one_of A := one : A.
-Hint Mode one_of + : typeclass_instances.
-Class opp_of A := opp : A -> A.
-Hint Mode opp_of + : typeclass_instances.
-Class add_of A := add : A -> A -> A.
-Hint Mode add_of + : typeclass_instances.
-Class sub_of A := sub : A -> A -> A.
-Hint Mode sub_of + : typeclass_instances.
-Class mul_of A := mul : A -> A -> A.
-Hint Mode mul_of + : typeclass_instances.
-Class exp_of A B := exp : A -> B -> A.
-Hint Mode exp_of + + : typeclass_instances.
-Class div_of A := div : A -> A -> A.
-Hint Mode div_of + : typeclass_instances.
-Class inv_of A := inv : A -> A.
-Hint Mode inv_of + : typeclass_instances.
-Class mod_of A := mod : A -> A -> A.
-Hint Mode mod_of + : typeclass_instances.
-Class scale_of A B := scale : A -> B -> B.
-Hint Mode scale_of + + : typeclass_instances.
-
-Class eq_of A := eq : A -> A -> bool.
-Hint Mode eq_of + : typeclass_instances.
-Class leq_of A := leq : A -> A -> bool.
-Hint Mode leq_of + : typeclass_instances.
-Class lt_of A := lt : A -> A -> bool.
-Hint Mode lt_of + : typeclass_instances.
-Class size_of A N := size : A -> N.
-Hint Mode size_of + + : typeclass_instances.
-
 Class spec_of A B   := spec : A -> B.
 Hint Mode spec_of + + : typeclass_instances.
-Definition spec_id {A : Type} : spec_of A A := id.
-Class implem_of A B := implem : A -> B.
-Hint Mode implem_of + + : typeclass_instances.
-Definition implem_id {A : Type} : implem_of A A := id.
-Class cast_of A B  := cast : A -> B.
-Hint Mode cast_of + + : typeclass_instances.
-
+Notation spec_id := spec_id.
 Module Exports.
-
-Typeclasses Transparent zero_of one_of opp_of add_of sub_of mul_of exp_of div_of
-            inv_of mod_of scale_of size_of eq_of leq_of lt_of spec_of implem_of cast_of.
-
+Typeclasses Transparent spec_of.
 Arguments spec / A B spec_of _: assert.
-
-Notation "0"      := zero        : computable_scope.
-Notation "1"      := one         : computable_scope.
-Notation "-%C"    := opp.
-Notation "- x"    := (opp x)     : computable_scope.
-Notation "+%C"    := add.
-Notation "x + y"  := (add x y)   : computable_scope.
-Notation "x - y"  := (sub x y)   : computable_scope.
-Notation "*%C"    := mul.
-Notation "x * y"  := (mul x y)   : computable_scope.
-Notation "x ^ y"  := (exp x y)   : computable_scope.
-Notation "x %/ y" := (div x y)   : computable_scope.
-Notation "x ^-1"  := (inv x)     : computable_scope.
-Notation "x %% y" := (mod x y)   : computable_scope.
-Notation "*:%C"   := scale.
-Notation "x *: y" := (scale x y) : computable_scope.
-Notation "x == y" := (eq x y)    : computable_scope.
-Notation "x <= y" := (leq x y)   : computable_scope.
-Notation "x < y"  := (lt x y)    : computable_scope.
-Notation cast     := (@cast _).
-
 End Exports.
-
 Module Compat.
-
-Notation zero_op := zero.
-Notation one_op := one.
-Notation opp_op := opp.
-Notation add_op := add.
-Notation sub_op := sub.
-Notation mul_op := mul.
-Notation exp_op := exp.
-Notation div_op := div.
-Notation inv_op := inv.
-Notation mod_op := mod.
-Notation scale_op := scale.
-Notation size_op := size.
-Notation eq_op := eq.
-Notation leq_op := leq.
-Notation lt_op := lt.
 Notation spec := spec.
-Notation implem := implem.
-Notation cast_op := cast.
-
 End Compat.
 End Op.
 End Refinements.
@@ -378,82 +308,35 @@ Import Refinements.
 Export Op.Exports.
 Export Op.Compat.
 
-Ltac simpC :=
-  do ?[ rewrite -[0%C]/0%R
-      | rewrite -[1%C]/1%R
-      | rewrite -[(_ + _)%C]/(_ + _)%R
-      | rewrite -[(_ + _)%C]/(_ + _)%N
-      | rewrite -[(- _)%C]/(- _)%R
-      | rewrite -[(_ - _)%C]/(_ - _)%R
-      | rewrite -[(_ - _)%C]/(_ - _)%N
-      | rewrite -[(_ * _)%C]/(_ * _)%R
-      | rewrite -[(_ * _)%C]/(_ * _)%N
-      | rewrite -[(_ %/ _)%C]/(_ %/ _)%R
-      | rewrite -[(_ %% _)%C]/(_ %% _)%R
-      | rewrite -[(_ == _)%C]/(_ == _)%bool
-      ].
-
-Tactic Notation  "context" "[" ssrpatternarg(pat) "]" tactic3(tac) :=
-  let H := fresh "H" in let Q := fresh "Q" in let eqQ := fresh "eqQ" in
-  ssrpattern pat => H;
-  elim/abstract_context : (H) => Q eqQ; rewrite /H {H};
-  tac; rewrite eqQ {Q eqQ}.
-
-Class strategy_class (C : forall T, T -> T -> Prop) :=
-   StrategyClass : C = @eq.
-Hint Mode strategy_class + : typeclass_instances.
-
-Class native_compute T (x y : T) := NativeCompute : x = y.
-Hint Mode native_compute - + - : typeclass_instances.
-Hint Extern 0 (native_compute _ _) =>
-  context [(X in native_compute X)] native_compute; reflexivity :
-  typeclass_instances.
-Instance strategy_class_native_compute : strategy_class native_compute := erefl.
-
-Class vm_compute T (x y : T) := VmCompute : x = y.
-Hint Mode vm_compute - + - : typeclass_instances.
-Hint Extern 0 (vm_compute _ _) =>
-  context [(X in vm_compute X)] vm_compute; reflexivity :
-  typeclass_instances.
-Instance strategy_class_vm_compute : strategy_class vm_compute := erefl.
-
-Class compute T (x y : T) := Compute : x = y.
-Hint Mode compute - + - : typeclass_instances.
-Hint Extern 0 (compute _ _) =>
-  context [(X in compute X)] compute; reflexivity :
-  typeclass_instances.
-Instance strategy_class_compute : strategy_class compute := erefl.
-
-Class simpl T (x y : T) := Simpl : x = y.
-Hint Mode simpl - + - : typeclass_instances.
-Hint Extern 0 (simpl _ _) =>
-  context [(X in simpl X)] simpl; reflexivity :
-  typeclass_instances.
-Instance strategy_class_simpl : strategy_class simpl := erefl.
-
-Lemma eval_eq C {eqC : strategy_class C} {T} {x x' : T}
-   {rx : C _ x x'} : x = x'.
-Proof. by rewrite eqC in rx. Qed.
-
-Notation "'[' 'eval'  strategy  'of'  x ']'" :=
-  (@eval_eq strategy _ _ x _ _).
-Notation eval strategy := [eval strategy of _].
-Notation "'[' 'eval'  strategy  'of'  x  'for'  y ']'" :=
-  ([eval strategy of x] : y = _).
-
-Lemma coqeal_eq C {eqC : strategy_class C} {T T'} spec (x x' : T) {y y' : T'}
-   {rxy : refines_unify eq (Op.spec_id x) (spec y)}  {ry : C _ y y'}
-   {rx : simpl (spec y') x'} : x = x'.
+Lemma coqeal_eq
+   C  {eqC : 'message "coqeal_eq cannot find"
+         (strategy_class C)}
+   C' {eqC' : 'message "coqeal_eq cannot find"
+         (strategy_class C')}
+   {T T'} spec (x x' : T) {y y' : T'}
+   {R : T -> T' -> Type}
+   {R_is_refinement : 'message "coqeal_eq cannot find"
+       ('refinement R)}
+   {rspec : 'message "coqeal_eq cannot find"
+       (refines (R ==> Logic.eq) Op.spec_id spec)}
+   {rxy : 'message "coqeal_eq cannot find"
+       (refines_unify eq (Op.spec_id x) (spec y))}
+   {ry : C _ y y'}
+   {rx : C' _ (spec y') x'} : x = x'.
 Proof.
+rewrite -> nobacktrackE in *.
 rewrite (refines_change 'recursive) in rxy.
-by rewrite eqC in ry; rewrite -rx -ry; apply: refines_eq.
+rewrite eqC in ry; rewrite eqC' in rx; rewrite -rx -ry.
+by rewrite -[x]/(Op.spec_id x); apply: refinesP.
 Qed.
 
-Notation "'[' 'coqeal'  strategy  'of'  x ']'" :=
-  (@coqeal_eq strategy _ _ _ _ x _ _ _ _ _ _).
-Notation coqeal strategy := [coqeal strategy of _].
-Notation "'[' 'coqeal'  strategy  'of'  x  'for'  y ']'" :=
-  ([coqeal strategy of x] : y = _).
+Notation "'[' 'coqeal'  strategy ,  spec_strategy  'of'  x ']'" :=
+  (@coqeal_eq strategy _ spec_strategy _ _ _ _ _ _ x _ _ _ _ _ _).
+Notation coqeal strategy := [coqeal strategy ,  unify of _].
+Notation coqeal_noop := [coqeal unify ,  unify of _].
+Notation coqeal_spec strategy := [coqeal strategy ,  simpl of _].
+Notation "'[' 'coqeal'  strategy ,  spec_strategy  'of'  x  'for'  y ']'" :=
+  ([coqeal strategy, spec_strategy of x] : y = _).
 
 Ltac coqeal := apply: refines_goal; vm_compute.
 Tactic Notation "coqeal_" tactic3(tac) :=  apply: refines_goal; tac.
@@ -463,9 +346,7 @@ Tactic Notation "coqeal" "[" ssrpatternarg(pat) "]" open_constr(strategy) :=
   rewrite /H {H} [(X in Q X)](coqeal strategy) eqQ {Q eqQ}.
 
 Ltac refines_apply1 := eapply refines_apply; tc.
-Ltac refines_abstr1 := eapply refines_abstr=> ???; tc.
 Ltac refines_apply := do ![refines_apply1].
-Ltac refines_abstr := do ![refines_abstr1].
 Ltac refines_trans :=  eapply refines_trans; tc.
 
 Lemma spec_refines_ key A B R a a' b `{Op.spec_of B A} :
@@ -478,7 +359,7 @@ Lemma spec_refinesP_ key A B R a a' b `{Op.spec_of B A} :
   refines_rec (R ==> Logic.eq) Op.spec_id spec ->
   refines_rec R a a' ->
   R (Op.spec a') b -> refines_ key R a b.
-Proof. by move=> *; apply/spec_refines_. Qed.
+Proof. by move=> *; apply: spec_refines_. Qed.
 
 Lemma eq_spec_refines_ key A B (R : A -> B -> Type) (a : A) (a' b : B) :
   refines_rec R a a' -> a' = b -> refines_ key R a b.
@@ -491,10 +372,31 @@ Definition spec_refinesP : forall A B R a a' b H, _ -> _ -> _ -> R a b :=
 Definition eq_spec_refines : forall A B R a a' b, _ -> _ -> R a b :=
   @eq_spec_refines_ tt.
 
-Ltac refines_abstrE := refines_abstr; rewrite !refinesE.
+(**************************)
+(* Parametric refinements *)
+(**************************)
+
+Import CMorphisms.
+
+Global Instance proper_refines key A B (R : A -> B -> Type) :
+  Proper (@eq A ==> @eq B ==> iffT) R ->
+  Proper (@eq A ==> @eq B ==> iffT) (refines_ key R).
+
+
+
+(* Tactic for doing parametricity proofs, it takes a parametricity
+   theorem generated by the Parametricity plugin as argument *)
+Ltac param x := 
+  
+  rewrite ?refinesE; do?move=> ?*;
+  eapply x=> *; eapply refinesP;
+  do ?eapply refines_apply; tc.
+
+(* Special tactic when relation is defined using \o *)
+Ltac param_comp x := eapply refines_trans; tc; param x.
 
 (* Bool refinements *)
-Instance refinement_bool : refinement bool_R := {}.
+Global Instance refinement_bool : 'refinement bool_R := {}.
 
 Global Instance refines_pair_R
   A A' B B' (rA : A -> A' -> Type) (rB : B -> B' -> Type) :
@@ -538,3 +440,12 @@ Proof. exact/trivial_refines/eqb_R. Qed.
 Global Instance refines_leibniz_eq (T : eqType) (x y : T) b :
   refines bool_R (x == y) b -> refines (fun T' T => T -> T') (x = y) b.
 Proof. by rewrite !refinesE => eq_xy b_true; apply/eqP; case: eq_xy b_true. Qed.
+
+Global Instance refines_bool_R_spec_id :
+  refines (bool_R ==> eq) spec_id id.
+Proof. by rewrite refinesE => ??[]. Qed.
+
+Global Instance refines_eq_spec_id (T : Type) (R : T -> T -> Type) :
+  refines (R ==> R) spec_id id.
+Proof. by rewrite refinesE. Qed.
+

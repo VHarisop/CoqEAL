@@ -213,19 +213,13 @@ Section binnat_theory.
 Local Open Scope rel_scope.
 
 Definition Rnat : nat -> N -> Type := fun_hrel nat_of_bin.
+Instance ref_Rnat : 'refinement Rnat.
 
 Lemma RnatE (n : nat) (x : N) : refines_rec Rnat n x -> n = x.
 Proof. by rewrite refinesE. Qed.
 
 Global Instance Rnat_spec_r x : refines Rnat (spec x) x.
 Proof. by rewrite refinesE. Qed.
-
-Global Instance Rnat_spec_l : refines (Rnat ==> nat_R) Op.spec_id spec.
-Proof.
-  rewrite refinesE=> x x' rx.
-  rewrite [spec _]RnatE /Op.spec_id [y in nat_R y _]RnatE.
-  exact: nat_Rxx.
-Qed.
 
 Global Instance Rnat_spec : refines (Rnat ==> Logic.eq) Op.spec_id spec.
 Proof. by rewrite refinesE. Qed.
@@ -247,8 +241,14 @@ Proof.
 by rewrite refinesE => _ x <- _ y <-; rewrite /Rnat /fun_hrel nat_of_add_bin.
 Qed.
 
+(* Hint Extern 999 (@refinement _ _ _) => *)
+(*   (once lazymatch goal with |- ?g => idtac "trying " g; fail 1 end) *)
+(*  : typeclass_instances. *)
+
+
 Global Instance Rnat_S : refines (Rnat ==> Rnat) S succN.
-Proof. by refines_abstrE; rewrite -add1n; apply/spec_refines. Qed.
+Proof. refines_abstrE; rewrite -add1n.
+apply/spec_refines. Qed.
 
 Lemma nat_of_binK : forall x, N.of_nat (nat_of_bin x) = x.
 Proof.
@@ -318,12 +318,16 @@ suff H : (nat_of_bin x == nat_of_bin y) = false by rewrite H.
 by apply/negP => [/eqP /(can_inj nat_of_binK)]; apply/eqP.
 Qed.
 
+
+Global Instance refines_spec_bool : 
+  refines (bool_R ==> eq) Op.spec_id id.
+Proof. by rewrite refinesE => ??[]. Qed.
+
 Global Instance Rnat_leq : refines (Rnat ==> Rnat ==> bool_R) ssrnat.leq Op.leq.
 Proof.
 rewrite refinesE=> _ x <- _ y <-; rewrite /leq_op /leq_N /leq.
-case: (N.leb_spec0 _ _)=> [/N.sub_0_le|] h.
-  rewrite /(_ <= _)%N [_ == _]refines_eq /=.
-  by rewrite [sub_op _ _]h.
+case: (N.leb_spec0 _ _)=> [/N.sub_0_le|] xBy.
+  by rewrite [_ == _](coqeal unify) [sub_op _ _]xBy.
 suff H : (nat_of_bin x - nat_of_bin y == 0) = false.
   by rewrite /(_ <= _)%N H.
 apply/negP=> /eqP; rewrite [x - y]RnatE [0]RnatE.
@@ -332,11 +336,8 @@ Qed.
 
 Global Instance Rnat_lt : refines (Rnat ==> Rnat ==> bool_R) ltn lt_op.
 Proof.
-apply refines_abstr2 => x x' rx y y' ry; rewrite refinesE /Rnat /fun_hrel.
-rewrite /lt_op /lt_N N.ltb_antisym /ltn /= ltnNge.
-rewrite [(y <= x)%N]refines_eq.
-exact: bool_Rxx.
-(* Cyril: this was wrong to do it like that, we should come back and fix *)
+refines_abstr; rewrite refinesE /ltn /= ltnNge; apply/eq_spec_refines.
+by rewrite /lt_op /lt_N N.ltb_antisym.
 Qed.
 
 Global Instance Rnat_cast_positive_N :
@@ -362,12 +363,16 @@ Global Opaque nat_of_bin bin_of_nat.
 
 Section test.
 
+Instance : 'refinement Rnat.
+
 Lemma test : 10000%num * 10000%num * (99999999%num + 1) =
              10000000000000000%num.
-Proof. by rewrite [X in X = _]RnatE; compute; reflexivity. Qed.
+Proof.
+by rewrite [X in X = _](coqeal unify); reflexivity.
+Qed.
 
 Lemma test' : 10000%num * 10000%num * (99999999%num + 1) =
              10000000000000000%num.
-Proof. by apply/eqP; rewrite [_ == _]refines_eq. Qed.
+Proof. by apply/eqP; rewrite [_ == _](coqeal unify). Qed.
 
 End test.

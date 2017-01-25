@@ -1,4 +1,6 @@
 -R . CoqEAL.refinements
+ops.v
+tclib.v
 hrel.v
 param.v
 refinements.v

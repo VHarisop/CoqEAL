@@ -174,6 +174,7 @@ Proof. by rewrite /Z_of_int /int_of_Z => [[[]|]]. Qed.
 Local Open Scope rel_scope.
 
 Definition Rint : int -> Znp -> Type := fun_hrel int_of_Z.
+Local Instance : 'refinement Rint.
 
 Local Instance zero_nat : Op.zero_of nat := 0%N.
 Local Instance one_nat  : Op.one_of nat  := 1%N.
@@ -207,6 +208,9 @@ Proof. by rewrite refinesE=> n n' <-. Qed.
 Local Instance Rint_pos_to_int : refines (Logic.eq ==> Rint) pos_to_int cast.
 Proof. by rewrite refinesE=> n n' <-; rewrite /pos_to_int natz. Qed.
 
+Local Instance Rint_specZ_l : refines (Rint ==> Logic.eq) Op.spec_id spec.
+Proof. by rewrite refinesE => a a' <-. Qed.
+
 Local Instance Rint_int_to_nat : refines (Rint ==> Logic.eq) int_to_nat cast.
 Proof.
   rewrite refinesE=> a b rab; rewrite [a]RintE {a rab}.
@@ -218,7 +222,8 @@ Qed.
 Local Instance Rint_int_to_pos : refines (Rint ==> Logic.eq) int_to_pos cast.
 Proof.
   rewrite refinesE => a b rab; rewrite /int_to_pos.
-  by rewrite [int_to_nat a]refines_eq {a rab}.
+  have ? : refinement nat nat (@eq nat) by [].
+  by rewrite [int_to_nat a](coqeal unify).
 Qed.
 
 Lemma eqSub (n m : nat) :
@@ -327,9 +332,6 @@ Qed.
 Local Instance Rint_specZ_r x : refines Rint (spec x) x.
 Proof. by rewrite !refinesE; case: x. Qed.
 
-Local Instance Rint_specZ_l :
-  refines (Rint ==> Logic.eq) Op.spec_id spec.
-Proof. by rewrite refinesE => a a' ra; rewrite [spec _]RintE. Qed.
 
 Local Instance Rint_implem : refines (Logic.eq ==> Rint) Op.implem_id implem.
 Proof.
@@ -384,8 +386,12 @@ Context `{!refines (Rnat ==> Logic.eq) Op.spec_id spec,
           !refines (Rpos ==> Logic.eq) Op.spec_id spec}.
 Context `{!refines (Logic.eq ==> Rnat) Op.implem_id implem,
           !refines (Logic.eq ==> Rpos) Op.implem_id implem}.
+(* Context `{'refinement Rnat, 'refinement Rpos}. *)
 
 Local Notation Z := (Z N P).
+Local Instance : 'refinement RZNP.
+Local Instance: 'refinement Rnat.
+Local Instance: 'refinement Rpos.
 
 Global Instance RZNP_zeroZ  : refines RZNP 0 0%C.
 Proof. param_comp zeroZ_R. Qed.
@@ -448,15 +454,17 @@ Qed.
 
 Global Instance RZNP_implemZ : refines (Logic.eq ==> RZNP) Op.implem_id implem.
 Proof.
-  eapply refines_trans; tc.
-  rewrite refinesE=> _ x ->.
-  case: x=> n /=.
-    apply: Z_R_Zpos_R.
-    have heq : refines eq n n by rewrite refinesE.
-    exact: refinesP.
-  apply: Z_R_Zneg_R.
-  have heq : refines eq (posS n) (posS n) by rewrite refinesE.
+have ? : 'refinement (@eq nat) by [].
+have ? : 'refinement (@eq pos) by [].
+eapply refines_trans; tc.
+rewrite refinesE=> _ x ->.
+case: x=> n /=.
+apply: Z_R_Zpos_R.
+have heq : refines eq n n by rewrite refinesE.
   exact: refinesP.
+apply: Z_R_Zneg_R.
+have heq : refines eq (posS n) (posS n) by rewrite refinesE.
+exact: refinesP.
 Qed.
 
 End binint_nat_pos.
@@ -466,6 +474,8 @@ End binint_theory.
 Section testint.
 
 From CoqEAL Require Import binnat.
+Instance ref_Rnat : 'refinement Rnat.
+Instance ref_RZNP: 'refinement (RZNP Rnat Rpos).
 
 Goal (0 == 0 :> int).
 by coqeal.
@@ -481,13 +491,12 @@ by coqeal.
 Abort.
 
 Goal (10%:Z - 5%:Z == 1 + 4%:Z).
-rewrite -[X in (X == _)]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
+rewrite [X in X == _](coqeal_spec vm_compute).
 by coqeal.
 Abort.
 
 Goal (-(1 + 2%:Z * 4%:Z) == -(1 + 2%:Z * 4%:Z)).
-rewrite -[X in (X == _)]/(Op.spec_id _).
-rewrite [Op.spec_id _]refines_eq /=.
+rewrite [X in (X == _)](coqeal_spec vm_compute).
 by coqeal.
 Abort.
 

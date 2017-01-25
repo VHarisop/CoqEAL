@@ -26,6 +26,7 @@ Local Open Scope rel_scope.
 
 Variable (A C : Type) (rAC : A -> C -> Type).
 Variable (N : Type) (rN : nat -> N -> Type).
+Context `{'refinement rAC} `{'refinement rN} .
 Context `{Op.implem_of A C} `{Op.spec_of N nat}.
 Context `{Op.zero_of N} `{Op.one_of N} `{Op.add_of N}.
 Context `{!refines (Logic.eq ==> rAC) Op.implem_id implem}.
@@ -40,7 +41,7 @@ Global Instance refine_nth1 :
 Proof.
   param nth_R.
   rewrite -[X in refines_rec _ X _]/(Op.spec_id _).
-  exact: refines_apply.
+  by refines_apply.
 Qed.
 
 Global Instance refine_nth2 :
@@ -64,7 +65,11 @@ Proof.
       apply: list_R_cons_R.
       have heq : refines eq hd hd by rewrite refinesE.
       rewrite -[X in rAC X _]/(Op.implem_id _).
-      exact: refinesP.
+      eapply refinesP.
+      refines_apply.
+      rewrite nobacktrackE.
+      tc.
+  
     exact: ih.
   exact: ihs.
 Qed.

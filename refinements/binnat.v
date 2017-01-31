@@ -247,8 +247,7 @@ Qed.
 
 
 Global Instance Rnat_S : refines (Rnat ==> Rnat) S succN.
-Proof. refines_abstrE; rewrite -add1n.
-apply/spec_refines. Qed.
+Proof. by refines_abstrE; rewrite -add1n; apply/spec_refines. Qed.
 
 Lemma nat_of_binK : forall x, N.of_nat (nat_of_bin x) = x.
 Proof.

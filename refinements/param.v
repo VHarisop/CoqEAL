@@ -51,6 +51,7 @@ Parametricity subn.
 Parametricity addn_rec.
 Parametricity addn.
 Parametricity eqn.
+Parametricity predn.
 
 (* This trick avoids having to apply Parametricity to eqtype structure *)
 Opaque eqn subn.

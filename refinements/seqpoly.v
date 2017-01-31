@@ -668,97 +668,92 @@ Goal (1 == (1 : {poly {poly {poly int}}})).
 by coqeal.
 Abort.
 
+Typeclasses Opaque spec.
 Goal ((1 + 2%:Z *: 'X + 3%:Z *: 'X^2) + (1 + 2%:Z%:P * 'X + 3%:Z%:P * 'X^2)
       == (1 + 1 + (2%:Z + 2%:Z) *: 'X + (3%:Z + 3%:Z)%:P * 'X^2)).
+Proof.
 rewrite [X in (X == _)](coqeal vm_compute).
 rewrite [X in (_ == X)](coqeal vm_compute).
-eapply refines_goal.
-  eapply refines_leibniz_eq.
-  eapply refines_apply.
-    tc.
-    tc.
-  rewrite nobacktrackE.
-  eapply refines_apply.
-   tc.
-  rewrite nobacktrackE.
-  eapply refines_apply.
-    tc.
-    eapply (@get_nobacktrack _ _ _ _ _ _).
-
-    rewrite nobacktrackE.
-    eapply refines_apply.
-    tc.
-    
-    tc.
-   
-  
-  tc.
-  tc.
-  refines_apply1.
-
-coqeal.
 (* coqeal. *)
+(* TODO: bugfix coqeal is very slow from here *)
+done.
 Abort.
 
 Goal (Poly [:: 1; 2%:Z; 3%:Z] + Poly [:: 1; 2%:Z; 3%:Z]) ==
       Poly [:: 1 + 1; 2%:Z + 2%:Z; 2%:Z + 4%:Z].
+Proof.
+rewrite /=. (* TODO: bug fix this !! *)
 by coqeal.
 Abort.
 
 Goal (- 1 == - (1: {poly {poly int}})).
+Proof.
 by coqeal.
 Abort.
 
 Goal (- (1 + 2%:Z *: 'X + 3%:Z%:P * 'X^2) == -1 - 2%:Z%:P * 'X - 3%:Z *: 'X^2).
+Proof.
 by coqeal.
 Abort.
 
 Goal (- Poly [:: 1; 2%:Z; 3%:Z]) == Poly [:: - 1; - 2%:Z; - 3%:Z].
+Proof.
+rewrite /=. (* TODO: bug fix this !! *)
 by coqeal.
 Abort.
 
 Goal (1 + 2%:Z *: 'X + 3%:Z *: 'X^2 - (1 + 2%:Z *: 'X + 3%:Z *: 'X^2) == 0).
+Proof.
 by coqeal.
 Abort.
 
 Goal (Poly [:: 1; 2%:Z; 3%:Z] - Poly [:: 1; 2%:Z; 3%:Z]) == 0.
+Proof.
+rewrite /=. (* TODO: bug fix this !! *)
 by coqeal.
 Abort.
 
 Goal ((1 + 2%:Z *: 'X) * (1 + 2%:Z%:P * 'X) == 1 + 4%:Z *: 'X + 4%:Z *: 'X^2).
+Proof.
 by coqeal.
 Abort.
 
 Goal (Poly [:: 1; 2%:Z] * Poly [:: 1; 2%:Z]) == Poly [:: 1; 4%:Z; 4%:Z].
+Proof.
+rewrite /=. (* TODO: bug fix this !! *)
 by coqeal.
 Abort.
 
 (* (1 + xy) * x = x + x^2y *)
 Goal ((1 + 'X * 'X%:P) * 'X == 'X + 'X^2 * 'X%:P :> {poly {poly int}}).
+Proof.
 rewrite [X in (X == _)](coqeal vm_compute).
-
-apply: (@refines_goal _ _ _ _).
-
-Typeclasses eauto := debug.
+rewrite /=. (* TODO: bug fix this !! *)
 by coqeal.
 Abort.
 
 Goal (Poly [:: Poly [:: 1; 0]; 1] * Poly [:: 1; 0]) ==
       Poly [:: Poly [:: 1; 0]; 1 ; 0] :> {poly {poly int}}.
-rewrite -[X in (X == _)]/(Op.spec_id _) [Op.spec_id _]refines_eq /=.
+Proof.
+rewrite /=. (* TODO: bug fix this !! *)
+rewrite [X in (X == _)](coqeal unify) /=.
 by coqeal.
 Abort.
 
 Goal (sizep ('X^2 : {poly int}) ==
       sizep (- 3%:Z *: 'X^(sizep ('X : {poly int})))).
+Proof.
 by coqeal.
 Abort.
 
 Goal (sizep (1 + 2%:Z *: 'X + 3%:Z *: 'X^2) == 3).
+Proof.
 by coqeal.
 Abort.
 
 Goal (sizep (Poly [:: 1; 2%:Z; 3%:Z]) == 3%nat).
+Proof.
+rewrite /=. (* TODO: bug fix this !! *)
 by coqeal.
 Abort.
 
@@ -780,12 +775,15 @@ Abort.
 
 Goal (splitp 2%nat (Poly [:: 1; 2%:Z; 3%:Z; 4%:Z]) ==
      (Poly [:: 3%:Z; 4%:Z], Poly [:: 1; 2%:Z])).
-rewrite /= [_ == _]refines_eq.
-by compute.
+Proof.
+rewrite /=.
+by coqeal.
 Abort.
 
 (* Test shiftp *)
 Goal (2%:Z *: shiftp 2%nat 1 == Poly [:: 0; 0; 2%:Z]).
+Proof.
+rewrite /=.
 by coqeal.
 Abort.
 

@@ -17,11 +17,11 @@ Section karatsuba_generic.
 
 Variable polyA N : Type.
 
-Context `{add_of polyA, mul_of polyA, sub_of polyA}.
-Context `{shiftp : shift_of polyA N, sizep : size_of polyA N}.
+Context `{Op.add_of polyA, Op.mul_of polyA, Op.sub_of polyA}.
+Context `{shiftp : shift_of polyA N, sizep : Op.size_of polyA N}.
 Context `{splitp : split_of polyA N}.
-Context `{one_of N, add_of N, mul_of N, leq_of N}.
-Context `{spec_of N nat, implem_of nat N}.
+Context `{Op.one_of N, Op.add_of N, Op.mul_of N, Op.leq_of N}.
+Context `{spec_of N nat, Op.implem_of nat N}.
 
 Fixpoint karatsuba_rec n (p q : polyA) := match n with
   | 0     => (p * q)%C
@@ -55,25 +55,25 @@ Local Open Scope rel_scope.
 
 Variable R : ringType.
 
-Instance add_polyR : add_of {poly R} := +%R.
-Instance mul_polyR : mul_of {poly R} := *%R.
-Instance sub_polyR : sub_of {poly R} := fun x y => (x - y)%R.
-Instance size_polyR : size_of {poly R} nat := sizep (R:=R).
+Instance add_polyR : Op.add_of {poly R} := +%R.
+Instance mul_polyR : Op.mul_of {poly R} := *%R.
+Instance sub_polyR : Op.sub_of {poly R} := fun x y => (x - y)%R.
+Instance size_polyR : Op.size_of {poly R} nat := sizep (R:=R).
 Instance shift_polyR : shift_of {poly R} nat := shiftp (R:=R).
 Instance split_polyR : split_of {poly R} nat := splitp (R:=R).
 
-Local Instance one_nat    : one_of nat        := 1%N.
-Local Instance add_nat    : add_of nat        := addn.
-Local Instance mul_nat    : mul_of nat        := muln.
-Local Instance leq_nat    : leq_of nat        := ssrnat.leq.
+Local Instance one_nat    : Op.one_of nat        := 1%N.
+Local Instance add_nat    : Op.add_of nat        := addn.
+Local Instance mul_nat    : Op.mul_of nat        := muln.
+Local Instance leq_nat    : Op.leq_of nat        := ssrnat.leq.
 Local Instance spec_nat   : spec_of nat nat   := spec_id.
-Local Instance implem_nat : implem_of nat nat := implem_id.
+Local Instance implem_nat : Op.implem_of nat nat := Op.implem_id.
 
 Lemma karatsuba_recE n (p q : {poly R}) : karatsuba_rec (N:=nat) n p q = p * q.
 Proof.
 elim: n=> //= n ih in p q *; case: ifP=> // _; set m := minn _ _.
 rewrite [p in RHS](rdivp_eq (monicXn _ m)) [q in RHS](rdivp_eq (monicXn _ m)).
-rewrite /shift_op /shift_polyR /shiftp /implem /implem_nat /implem_id.
+rewrite /shift_op /shift_polyR /shiftp /implem /implem_nat /Op.implem_id.
 simpC.
 rewrite !ih !(mulrDl, mulrDr, mulNr) mulnC exprM.
 rewrite -addrA -addrA -opprD [X in X + _ - _]addrC addrACA addrK.
@@ -87,9 +87,9 @@ Section karatsuba_param.
 
 Context (polyC : Type) (RpolyC : {poly R} -> polyC -> Type).
 Context (N : Type) (rN : nat -> N -> Type).
-Context `{add_of polyC, mul_of polyC, sub_of polyC}.
-Context `{one_of N, add_of N, mul_of N, leq_of N}.
-Context `{spec_of N nat, implem_of nat N}.
+Context `{Op.add_of polyC, Op.mul_of polyC, Op.sub_of polyC}.
+Context `{Op.one_of N, Op.add_of N, Op.mul_of N, Op.leq_of N}.
+Context `{spec_of N nat, Op.implem_of nat N}.
 Context `{!refines (RpolyC ==> RpolyC ==> RpolyC) +%R +%C}.
 Context `{!refines (RpolyC ==> RpolyC ==> RpolyC) *%R *%C}.
 Context `{!refines (RpolyC ==> RpolyC ==> RpolyC) (fun x y => x - y)%R sub_op}.
@@ -98,23 +98,27 @@ Context `{!refines (rN ==> rN ==> rN) addn +%C}.
 Context `{!refines (rN ==> rN ==> rN) muln *%C}.
 Context `{!refines (rN ==> rN ==> bool_R) ssrnat.leq leq_op}.
 Context `{!refines (rN ==> nat_R) spec_id spec,
-          !refines (nat_R ==> rN) implem_id implem}.
+          !refines (nat_R ==> rN) Op.implem_id implem}.
 
 Context `{!shift_of polyC N}.
 Context `{!refines (rN ==> RpolyC ==> RpolyC) shift_polyR shift_op}.
 
-Context `{!size_of polyC N}.
+Context `{!Op.size_of polyC N}.
 Context `{!refines (RpolyC ==> rN) size_polyR size_op}.
 
 Context `{!split_of polyC N}.
 Context `{!refines (rN ==> RpolyC ==> prod_R RpolyC RpolyC) split_polyR split_op}.
 
+Instance ref_RpolyC : 'refinement RpolyC.
+Instance ref_rN : 'refinement rN.
+Instance ref_nat_R : 'refinement nat_R | 999.
 
 Global Instance RpolyC_karatsuba_rec :
   refines (nat_R ==> RpolyC ==> RpolyC ==> RpolyC)
           (karatsuba_rec (polyA:={poly R}) (N:=nat))
           (karatsuba_rec (polyA:=polyC) (N:=N)).
-Proof. param karatsuba_rec_R. Qed.
+Proof. by param karatsuba_rec_R. Qed.
+  
 
 Global Instance RpolyC_karatsuba :
   refines (RpolyC ==> RpolyC ==> RpolyC)
@@ -138,11 +142,22 @@ Section karatsuba_test.
 From mathcomp Require Import ssrint.
 From CoqEAL Require Import binnat binint seqpoly.
 
+Local Instance ref_Rnat : 'refinement Rnat.
+(* Instance ref_nat_eq : 'refinement (@eq nat) | 99. *)
+Local Instance ref_Rpos : 'refinement Rpos.
+Local Instance ref_RZNP: 'refinement (RZNP Rnat Rpos).
+Local Instance ref_seq A B (R : A -> B -> Type) :
+ 'refinement R -> 'refinement (list_R R).
+
+Local Instance ref_RseqpolyC' (P : ringType) C (R : P -> C -> Type) :
+   'refinement R -> 'refinement (@RseqpolyC _ _ R).
+
 Goal ((1 + 2%:Z *: 'X) * (1 + 2%:Z%:P * 'X) == 1 + 4%:Z *: 'X + 4%:Z%:P * 'X^2).
 by coqeal.
 Abort.
 
 Goal (Poly [:: 1; 2%:Z] * Poly [:: 1; 2%:Z]) == Poly [:: 1; 4%:Z; 4%:Z].
+rewrite /=.
 by coqeal.
 Abort.
 
@@ -165,10 +180,12 @@ Let q2 := Eval simpl in bigpoly 2 10.
 
 (* TODO: Translate Poly directly? *)
 Goal (Poly p1 * Poly p2 == Poly p2 * Poly p1).
+rewrite /=.
 by coqeal.
 Abort.
 
 Goal (q1 * q2 == q2 * q1).
+Typeclasses eauto := debug.
 by coqeal.
 Abort.
 

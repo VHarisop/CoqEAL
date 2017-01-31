@@ -9,21 +9,21 @@ Import Refinements.Op.
 
 Section operations.
 
-Global Instance zero_bool : zero_of bool := false.
+Global Instance zero_bool : Op.zero_of bool := false.
 
-Global Instance one_bool : one_of bool := true.
+Global Instance one_bool : Op.one_of bool := true.
 
-Global Instance opp_bool : opp_of bool := id.
+Global Instance opp_bool : Op.opp_of bool := id.
 
-Global Instance add_bool : add_of bool := xorb.
+Global Instance add_bool : Op.add_of bool := xorb.
 
-Global Instance sub_bool : sub_of bool := xorb.
+Global Instance sub_bool : Op.sub_of bool := xorb.
 
-Global Instance mul_bool : mul_of bool := andb.
+Global Instance mul_bool : Op.mul_of bool := andb.
 
-Global Instance inv_bool : inv_of bool := id.
+Global Instance inv_bool : Op.inv_of bool := id.
 
-Global Instance eq_bool : eq_of bool := eqtype.eq_op.
+Global Instance eq_bool : Op.eq_of bool := eqtype.eq_op.
 
 End operations.
 

@@ -184,21 +184,20 @@ Proof. by rewrite !refinesE. Qed.
 
 End refines_split.
 
-Lemma refines_apply r1 r2
+Lemma refines_apply r1 r2 r3
   A B (R : A -> B -> Type) 
-  {R_is_refinement : nobacktrack true r1 true
+  {R_is_refinement : nobacktrack tt r1 true
    "refines_apply cannot find" ('refinement R)}
   C D (R' : C -> D -> Type) :
   forall (a : A) (b : B), 
   nobacktrack r1 r2 false "" (refines R a b) ->
   forall (c : A -> C) (d : B -> D), 
-  nobacktrack r2 true false "" (refines (R ==> R') c d) ->
+  nobacktrack r2 r3 false "" (refines (R ==> R') c d) ->
   refines R' (c a) (d b).
 Proof.
 rewrite !refinesE.
-move=> a b; rewrite !nobacktrackE; case: (r1) => //.
-case: r2 => //.
-move=> c d; rewrite nobacktrackE => rcd
+move=> a b; rewrite nobacktrackE => rab.
+move=> c d; rewrite nobacktrackE => rcd.
 exact: rcd.
 Qed.
 
@@ -233,7 +232,7 @@ Definition refinesP := @refinesP_ 'recursive tt.
 (* Global Existing Instance refines_symbol_apply | 99. *)
 
 Definition refines_recursive_apply := @refines_apply 'recursive.
-Global Existing Instance refines_recursive_apply | 99.
+Global Existing Instance refines_recursive_apply | 999.
 
 (* Definition refines_symbol_bool_eq := @refines_bool_eq 'symbol. *)
 (* Global Existing Instance refines_symbol_bool_eq. *)
@@ -448,7 +447,7 @@ Global Instance refines_eqb : refines (bool_R ==> bool_R ==> bool_R) eqtype.eq_o
 Proof. by param eqb_R. Qed.
 
 Global Instance refines_leibniz_eq (T : eqType) (x y : T) b :
-  refines_rec bool_R (x == y) b -> refines_rec (fun T' T => T -> T') (x = y) b.
+  refines_rec bool_R (x == y) b -> refines (fun T' T => T -> T') (x = y) b.
 Proof. by rewrite !refinesE => eq_xy b_true; apply/eqP; case: eq_xy b_true. Qed.
 
 Global Instance refines_bool_R_spec_id :

@@ -527,7 +527,7 @@ Proof.
 Qed.
 
 Global Instance RseqpolyC_mulXn p sp n rn :
-  refines rN n rn -> refines RseqpolyC p sp ->
+  refines_rec rN n rn -> refines_rec RseqpolyC p sp ->
   refines RseqpolyC (p * 'X^n) (Op.shift_op rn sp).
 Proof.
   move=> hn hp; rewrite -[_ * 'X^_]/(shiftp _ _).
@@ -538,12 +538,12 @@ Lemma mulXnC (p : {poly R}) n : p * 'X^n = 'X^n * p.
 Proof. by apply/polyP=> i; rewrite coefMXn coefXnM. Qed.
 
 Global Instance RseqpolyC_Xnmul p sp n rn :
-  refines rN n rn -> refines RseqpolyC p sp ->
+  refines_rec rN n rn -> refines RseqpolyC p sp ->
   refines RseqpolyC ('X^n * p) (Op.shift_op rn sp).
 Proof. by move=> ??; rewrite -mulXnC; apply: (@refines_subst 'recursive). Qed.
 
 Global Instance RseqpolyC_scaleXn c rc n rn :
-  refines rN n rn -> refines rAC c rc ->
+  refines_rec rN n rn -> refines_rec rAC c rc ->
   refines RseqpolyC (c *: 'X^n) (Op.shift_op rn (cast rc)).
 Proof.
   move=> hn hc; rewrite -mul_polyC -[_ * 'X^_]/(shiftp _ _).
@@ -551,15 +551,15 @@ Proof.
 Qed.
 
 Global Instance RseqpolyC_mulX p sp :
-  refines RseqpolyC p sp -> refines RseqpolyC (p * 'X) (Op.shift_op (1%C : N) sp).
+  refines_rec  RseqpolyC p sp -> refines RseqpolyC (p * 'X) (Op.shift_op (1%C : N) sp).
 Proof. rewrite -['X]expr1. exact: RseqpolyC_mulXn. Qed.
 
 Global Instance RseqpolyC_Xmul p sp :
-  refines RseqpolyC p sp -> refines RseqpolyC ('X * p) (Op.shift_op (1%C : N) sp).
+  refines_rec RseqpolyC p sp -> refines RseqpolyC ('X * p) (Op.shift_op (1%C : N) sp).
 Proof. rewrite -['X]expr1 -mulXnC; exact: RseqpolyC_mulX. Qed.
 
 Global Instance RseqpolyC_scaleX c rc :
-  refines rAC c rc ->
+  refines_rec rAC c rc ->
   refines RseqpolyC (c *: 'X) (Op.shift_op (1%C : N) (cast rc)).
 Proof. rewrite -['X]expr1; exact: RseqpolyC_scaleXn. Qed.
 
@@ -570,7 +570,7 @@ Global Instance RseqpolyC_split :
 Proof. by param_comp split_seqpoly_R. Qed.
 
 Global Instance RseqpolyC_splitn n rn p sp :
-  refines rN n rn -> refines RseqpolyC p sp ->
+  refines_rec rN n rn -> refines_rec RseqpolyC p sp ->
   refines (prod_R RseqpolyC RseqpolyC) (splitp n p) (Op.split_op rn sp).
 Proof. by move=> hn hp; apply: (@refines_subst 'recursive). Qed.
 
@@ -599,7 +599,7 @@ Global Instance RseqpolyC_X : refines RseqpolyC 'X (Op.shift_op (1%C : N) 1)%C.
 Proof. rewrite -['X]mul1r; exact: RseqpolyC_mulX. Qed.
 
 Global Instance RseqpolyC_Xn n rn :
-  refines rN n rn -> refines RseqpolyC 'X^n (Op.shift_op rn 1)%C.
+  refines_rec rN n rn -> refines RseqpolyC 'X^n (Op.shift_op rn 1)%C.
 Proof. move=> hn; rewrite -['X^_]mul1r; exact: RseqpolyC_mulXn. Qed.
 
 (* Lemma gRing_Ring_type_Rxx r : gRing_Ring_type_R r r. *)
@@ -634,8 +634,8 @@ End seqpoly_theory.
 
 (* Always simpl Poly. Maybe have refinement instance instead? Is this *)
 (* more efficient? *)
-Hint Extern 0 (refines _ (Poly _) _) => simpl : typeclass_instances.
-Hint Extern 0 (refines _ _ (Poly _)) => simpl : typeclass_instances.
+(* Hint Extern 0 (refines _ (Poly _) _) => simpl : typeclass_instances. *)
+(* Hint Extern 0 (refines _ _ (Poly _)) => simpl : typeclass_instances. *)
 
 Section testpoly.
 
@@ -673,7 +673,6 @@ Opaque refines_.
 Goal ((1 + 2%:Z *: 'X + 3%:Z *: 'X^2) + (1 + 2%:Z%:P * 'X + 3%:Z%:P * 'X^2)
       == (1 + 1 + (2%:Z + 2%:Z) *: 'X + (3%:Z + 3%:Z)%:P * 'X^2)).
 Proof.
-Typeclasses eauto := debug.
 rewrite [X in (X == _)](coqeal vm_compute).
 rewrite [X in (_ == X)](coqeal vm_compute).
 (* coqeal. *)

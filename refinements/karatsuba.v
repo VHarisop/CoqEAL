@@ -125,15 +125,15 @@ Global Instance RpolyC_karatsuba :
     (karatsuba (polyA:={poly R}) (N:=nat)) (karatsuba (polyA:=polyC) (N:=N)).
 Proof. param karatsuba_R. Qed.
 
-Global Instance RpolyC_karatsuba_mul p sp q sq :
-  refines RpolyC p sp -> refines RpolyC q sq ->
+(* Global Instance RpolyC_karatsuba_mul p sp q sq : *)
+(*   refines_rec RpolyC p sp -> refines_rec RpolyC q sq ->
   refines RpolyC (p * q) (karatsuba (N:=N) sp sq).
 Proof.
   move=> hp hq.
   rewrite refinesE -karatsubaE.
   exact: refinesP.
 Qed.
-
+ *)
 End karatsuba_param.
 End karatsuba_correctness.
 
@@ -181,12 +181,14 @@ Let q2 := Eval simpl in bigpoly 2 10.
 (* TODO: Translate Poly directly? *)
 Goal (Poly p1 * Poly p2 == Poly p2 * Poly p1).
 rewrite /=.
+rewrite -!karatsubaE.
 by coqeal.
 Abort.
 
 Goal (q1 * q2 == q2 * q1).
+rewrite /q1 /q2.
 Typeclasses eauto := debug.
-by coqeal.
+coqeal.
 Abort.
 
 End karatsuba_test.

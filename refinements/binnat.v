@@ -317,7 +317,6 @@ suff H : (nat_of_bin x == nat_of_bin y) = false by rewrite H.
 by apply/negP => [/eqP /(can_inj nat_of_binK)]; apply/eqP.
 Qed.
 
-
 Global Instance refines_spec_bool : 
   refines (bool_R ==> eq) Op.spec_id id.
 Proof. by rewrite refinesE => ??[]. Qed.

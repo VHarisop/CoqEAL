@@ -668,10 +668,12 @@ Goal (1 == (1 : {poly {poly {poly int}}})).
 by coqeal.
 Abort.
 
-Typeclasses Opaque spec.
+Typeclasses Opaque spec refines_.
+Opaque refines_.
 Goal ((1 + 2%:Z *: 'X + 3%:Z *: 'X^2) + (1 + 2%:Z%:P * 'X + 3%:Z%:P * 'X^2)
       == (1 + 1 + (2%:Z + 2%:Z) *: 'X + (3%:Z + 3%:Z)%:P * 'X^2)).
 Proof.
+Typeclasses eauto := debug.
 rewrite [X in (X == _)](coqeal vm_compute).
 rewrite [X in (_ == X)](coqeal vm_compute).
 (* coqeal. *)

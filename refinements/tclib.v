@@ -24,19 +24,14 @@ Bind Scope key_scope with Key.
 
 Fact nobacktrack_key : Key. Proof tt.
 
-Class unit_class := UnitClass {}.
-Global Instance the_unit_class : unit_class.
-
-Class nobacktrack (input output : bool) (print : bool) (str : string) (class : Type) :=
-   nobacktrack_field : locked_with nobacktrack_key 
-   (if input then (if output then class else unit_class) else False).
+Class nobacktrack (input output : unit) (print : bool) (str : string) (class : Type) :=
+   nobacktrack_field : locked_with nobacktrack_key class.
 Arguments nobacktrack _ _ _ str%string.
 Hint Mode nobacktrack + - - - - : typeclass_instances.
 
 Section nobacktrack.
-Context (input output : bool) (print : bool) (str : string) (class' : Type).
-Local Notation nobacktrack := (nobacktrack input output print str class').
-Local Notation class := (if input then (if output then class' else unit_class) else False).
+Context (input output : unit) (print : bool) (str : string) (class : Type).
+Local Notation nobacktrack := (nobacktrack input output print str class).
 Lemma nobacktrackE : nobacktrack = class.
 Proof. by rewrite /nobacktrack; case: nobacktrack_key. Qed.
 Definition put_nobacktrack : nobacktrack -> class.
@@ -46,18 +41,16 @@ Proof. by rewrite nobacktrackE. Qed.
 
 End nobacktrack.
 
-Hint Extern 0 (@nobacktrack true _ false _ _) =>
-  tryif now apply (@get_nobacktrack _ true _ _ _ _) then idtac
-  else now apply (@get_nobacktrack _ false _ _ _ _) : typeclass_instances.
+Hint Extern 0 (@nobacktrack tt _ false _ _) =>
+  now apply (@get_nobacktrack _ tt _ _ _ _) : typeclass_instances.
 
-Hint Extern 0 (@nobacktrack true _ true _ _) =>
-  tryif now apply (@get_nobacktrack _ true _ _ _ _) then idtac
-       else (once lazymatch goal with |- ?g => idtac g end;
-       now apply (@get_nobacktrack _ false _ _ _ _))
+Hint Extern 0 (@nobacktrack tt _ true _ _) =>
+  tryif now apply (@get_nobacktrack _ tt _ _ _ _) then idtac
+       else (once lazymatch goal with |- ?g => idtac g end; fail 1)
   : typeclass_instances.
 
-Notation "'nobacktrack" := (@nobacktrack true true false "") (only parsing).
-Notation "'message" := (@nobacktrack true true true).
+Notation "'nobacktrack" := (@nobacktrack tt tt false "") (only parsing).
+Notation "'message" := (@nobacktrack tt tt true).
 
 (*****************************)
 (* General reduction classes *)

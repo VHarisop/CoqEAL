@@ -2,6 +2,7 @@ opam-version: "1.2"
 name: "coq-coqeal-theory"
 maintainer: "Cyril Cohen <cyril.cohen@inria.fr>"
 homepage: "www.github.com/CoqEAL"
+version: "dev"
 license: "MIT"
 build: [
   [make "-j%{jobs}%"]

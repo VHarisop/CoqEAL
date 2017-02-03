@@ -1,5 +1,6 @@
 opam-version: "1.2"
 name: "coq-coqeal-refinements"
+version: "dev"
 maintainer: "Cyril Cohen <cyril.cohen@inria.fr>"
 homepage: "www.github.com/CoqEAL"
 license: "MIT"
@@ -11,5 +12,5 @@ remove: ["rm" "-R" "%{lib}%/coq/user-contrib/CoqEAL_theory"]
 depends: [
   "coq" {= "8.6"}
   "coq-parametricity" {= "dev"}
-  "coq-coqeal-refinements"   {= "dev"}
+  "coq-coqeal-theory"   {= "dev"}
 ]

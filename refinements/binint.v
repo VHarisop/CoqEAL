@@ -403,7 +403,16 @@ Global Instance RZNP_castNZ : refines (Rnat ==> RZNP) Posz cast.
 Proof. param_comp cast_NZ_R. Qed.
 
 Global Instance RZNP_castPZ : refines (Rpos ==> RZNP) pos_to_int cast.
-Proof. param_comp cast_PZ_R. Qed.
+Proof. param_comp cast_PZ_R.
+Set Typeclasses Debug Verbosity 2.
+rewrite /cast_pos_nat.
+Print HintDb typeclass_instances.
+Typeclasses Opaque val.
+tc.
+
+eapply refines_apply; tc.
+
+ Qed.
 
 Global Instance RZNP_castZN: refines (RZNP ==> Rnat) int_to_nat cast.
 Proof. rewrite /cast; param_comp cast_ZN_R. Qed.

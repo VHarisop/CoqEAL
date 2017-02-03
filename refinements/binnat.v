@@ -351,7 +351,7 @@ Proof.
   rewrite refinesE=> x x' rx; rewrite [x]RnatE.
   case: x' {x rx} => [|p] /=; last by rewrite -to_natE.
   rewrite /insubd insubF //= /cast.
-  exact/spec_refinesP.
+  by apply (@spec_refinesP _ _ _ _ _ _ _ _ _).
 Qed.
 
 End binnat_theory.

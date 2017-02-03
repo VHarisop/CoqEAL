@@ -101,13 +101,13 @@ Context `{!refines (rN ==> nat_R) spec_id spec,
           !refines (nat_R ==> rN) Op.implem_id implem}.
 
 Context `{!shift_of polyC N}.
-Context `{!refines (rN ==> RpolyC ==> RpolyC) shift_polyR shift_op}.
+Context `{!refines (rN ==> RpolyC ==> RpolyC) shift_op shift_op}.
 
 Context `{!Op.size_of polyC N}.
-Context `{!refines (RpolyC ==> rN) size_polyR size_op}.
+Context `{!refines (RpolyC ==> rN) size_op size_op}.
 
 Context `{!split_of polyC N}.
-Context `{!refines (rN ==> RpolyC ==> prod_R RpolyC RpolyC) split_polyR split_op}.
+Context `{!refines (rN ==> RpolyC ==> prod_R RpolyC RpolyC) split_op split_op}.
 
 Instance ref_RpolyC : 'refinement RpolyC.
 Instance ref_rN : 'refinement rN.
@@ -146,11 +146,14 @@ Local Instance ref_Rnat : 'refinement Rnat.
 (* Instance ref_nat_eq : 'refinement (@eq nat) | 99. *)
 Local Instance ref_Rpos : 'refinement Rpos.
 Local Instance ref_RZNP: 'refinement (RZNP Rnat Rpos).
-Local Instance ref_seq A B (R : A -> B -> Type) :
+(* Local Instance ref_seq A B (R : A -> B -> Type) :
  'refinement R -> 'refinement (list_R R).
+ *)
+(* Local Instance ref_RseqpolyC (P : ringType) C (R : P -> C -> Type) : *)
+(*    'refinement R -> 'refinement (RseqpolyC R). *)
 
-Local Instance ref_RseqpolyC' (P : ringType) C (R : P -> C -> Type) :
-   'refinement R -> 'refinement (@RseqpolyC _ _ R).
+Local Instance ref_RseqpolyC :
+    'refinement (RseqpolyC (RZNP Rnat Rpos)).
 
 Goal ((1 + 2%:Z *: 'X) * (1 + 2%:Z%:P * 'X) == 1 + 4%:Z *: 'X + 4%:Z%:P * 'X^2).
 by coqeal.
@@ -172,22 +175,34 @@ Fixpoint bigpoly (x : int) (n : nat) : {poly int} :=
   | n.+1 => x%:P + (bigpoly (x+1) n) * 'X
   end.
 
-Let p1 := Eval compute in bigseq 1 10.
-Let p2 := Eval compute in bigseq 2 10.
+
+(* Local Instance ref_seq A B (R : A -> B -> Type) : *)
+(*  'refinement R -> 'refinement (list_R R). *)
+
+(* Local Instance ref_RseqpolyC (P : ringType) C (R : P -> C -> Type) : *)
+(*    'refinement R -> 'refinement (RseqpolyC R). *)
+
+Let p1 := Eval compute in bigseq 1 1.
+Let p2 := Eval compute in bigseq 2 1.
 
 Let q1 := Eval simpl in bigpoly 1 10.
 Let q2 := Eval simpl in bigpoly 2 10.
 
+Typeclasses Opaque karatsuba.
+Opaque karatsuba.
+(* Set Typeclasses Filtered Unification. *)
+(* Set Typeclasses Unique Instances. *)
 (* TODO: Translate Poly directly? *)
 Goal (Poly p1 * Poly p2 == Poly p2 * Poly p1).
 rewrite /=.
-rewrite -!karatsubaE.
+(* rewrite -!karatsubaE. *)
+Set Typeclasses Debug Verbosity 2.
+rewrite [X in X == _](coqeal unify).
 by coqeal.
 Abort.
 
 Goal (q1 * q2 == q2 * q1).
 rewrite /q1 /q2.
-Typeclasses eauto := debug.
 coqeal.
 Abort.
 

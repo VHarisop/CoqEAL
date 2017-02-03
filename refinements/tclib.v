@@ -17,8 +17,8 @@ Bind Scope key_scope with Key.
 (***************************************)
 (* No backtracking with error messages *)
 (***************************************)
-(* The errormessage typeclass deliberatly cuts typeclass backtracking *)
-(* When some class is wrapped by errormessage, its solution is *)
+(* The nobacktrack typeclass deliberatly cuts typeclass backtracking *)
+(* When some class is wrapped by nobacktrack, its solution is *)
 (* independent from the rest of the Goal and an error message *)
 (* is displayed in case of failure *)
 
@@ -42,11 +42,11 @@ Proof. by rewrite nobacktrackE. Qed.
 End nobacktrack.
 
 Hint Extern 0 (@nobacktrack tt _ false _ _) =>
-  now apply (@get_nobacktrack _ tt _ _ _ _) : typeclass_instances.
+  solve [apply (@get_nobacktrack _ tt _ _ _ _)] : typeclass_instances.
 
 Hint Extern 0 (@nobacktrack tt _ true _ _) =>
-  tryif now apply (@get_nobacktrack _ tt _ _ _ _) then idtac
-       else (once lazymatch goal with |- ?g => idtac g end; fail 1)
+  tryif solve [apply (@get_nobacktrack _ tt _ _ _ _)] then idtac
+       else (once match goal with |- ?g => idtac g end; fail 1)
   : typeclass_instances.
 
 Notation "'nobacktrack" := (@nobacktrack tt tt false "") (only parsing).

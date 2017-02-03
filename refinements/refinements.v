@@ -12,6 +12,30 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope rel.
 
+Create HintDb coqeal.
+
+Fact with_coqeal_key : Key. Proof tt.
+
+Class with_coqeal (class : Type) :=
+   with_coqeal_field : locked_with with_coqeal_key class.
+
+Section with_coqeal.
+Context (class : Type).
+Local Notation with_coqeal := (with_coqeal class).
+Lemma with_coqealE : with_coqeal = class.
+Proof. by rewrite /with_coqeal; case: with_coqeal_key. Qed.
+Definition put_with_coqeal : with_coqeal -> class.
+Proof. by rewrite with_coqealE. Qed.
+Definition get_with_coqeal : class -> with_coqeal.
+Proof. by rewrite with_coqealE. Qed.
+End with_coqeal.
+
+Global Existing Instance get_with_coqeal.
+
+(* Hint Extern 0 (with_coqeal _) => *)
+(*   solve [eapply @get_with_coqeal; *)
+(*    typeclasses eauto with coqeal typeclass_instances] : typeclass_instances. *)
+
 (**************************)
 (* Linking param and hrel *)
 (**************************)
@@ -133,6 +157,7 @@ Class refines_ key P C (R : P -> C -> Type) (p : P) (c : C) :=
   refines_rel : (locked_with key R) p c.
 Arguments refines_ key%key {P C} R%rel p c%C : simpl never.
 Hint Mode refines_ + - + - + - : typeclass_instances.
+Hint Opaque refines_ : coqeal.
 
 Lemma refinesE key A B (R : A -> B -> Type) : refines_ key R = R.
 Proof. by rewrite /refines_ unlock. Qed.
@@ -280,8 +305,8 @@ Notation refines_unify := (@refines_ ('unify 'recursive) _ _).
 (* Proof. rewrite !refinesE; exact: nat_R_eq. Qed. *)
 
 Lemma refines_goal (G G' : Type) :
-  refines_rec (fun T T' => T' -> T) G G' -> G' -> G.
-Proof. by rewrite refinesE. Qed.
+  with_coqeal (refines_rec (fun T T' => T' -> T) G G') -> G' -> G.
+Proof. by rewrite with_coqealE refinesE. Qed.
 
 Definition spec_id {A : Type} : A -> A := id.
 
@@ -295,7 +320,9 @@ Class spec_of A B   := spec : A -> B.
 Hint Mode spec_of + + : typeclass_instances.
 Notation spec_id := spec_id.
 Module Exports.
-Typeclasses Transparent spec_of.
+Typeclasses Transparent spec_of. (* TODO: Deprecated *)
+Hint Transparent spec_of : coqeal.
+Hint Opaque spec spec_id : coqeal.
 Arguments spec / A B spec_of _: assert.
 End Exports.
 Module Compat.
@@ -316,15 +343,15 @@ Lemma coqeal_eq
    {T T'} spec (x x' : T) {y y' : T'}
    {R : T -> T' -> Type}
    {R_is_refinement : 'message "coqeal_eq cannot find"
-       ('refinement R)}
+       (with_coqeal ('refinement R))}
    {rspec : 'message "coqeal_eq cannot find"
-       (refines (R ==> Logic.eq) Op.spec_id spec)}
+       (with_coqeal (refines (R ==> Logic.eq) Op.spec_id spec))}
    {rxy : 'message "coqeal_eq cannot find"
-       (refines_unify eq (Op.spec_id x) (spec y))}
+       (with_coqeal (refines_unify eq (Op.spec_id x) (spec y)))}
    {ry : C _ y y'}
    {rx : C' _ (spec y') x'} : x = x'.
 Proof.
-rewrite -> nobacktrackE in *.
+rewrite -> nobacktrackE, with_coqealE in *.
 rewrite (refines_change 'recursive) in rxy.
 rewrite eqC in ry; rewrite eqC' in rx; rewrite -rx -ry.
 by rewrite -[x]/(Op.spec_id x); apply: refinesP.
@@ -352,26 +379,28 @@ Ltac refines_abstr1 := eapply refines_abstr=> ???.
 Ltac refines_abstr := do ![refines_abstr1].
 Ltac refines_abstrE := refines_abstr; rewrite !refinesE.
 
-Lemma spec_refines_ key A B R a a' b `{Op.spec_of B A} :
+Lemma spec_refines_ key A B R a a' b (spec : A -> B) :
   'message "spec_refines_: no spec found"
-           (refines_rec (R ==> Logic.eq) Op.spec_id Op.spec) ->
-  'message "spec_refines_: cannot refine" (refines_rec R a a') ->
+           (with_coqeal (refines_rec (R ==> Logic.eq) Op.spec_id spec)) ->
+  'message "spec_refines_: cannot refine" (with_coqeal (refines_rec R a a')) ->
   'message "spec_refines_: cannot refine" 
-           (refines_rec R (Op.spec a') b) ->
+           (with_coqeal (refines_rec R (spec a') b)) ->
   refines_ key R a b.
-Proof. by rewrite !nobacktrackE !refinesE /= => specP /specP <-. Qed.
+Proof. 
+by rewrite !nobacktrackE !refinesE !with_coqealE /= => specP /specP <-.
+Qed.
 
-Lemma spec_refinesP_ key A B R a a' b `{Op.spec_of B A} :
+Lemma spec_refinesP_ key A B R a a' b (spec : A -> B) :
   'message "spec_refinesP_: no spec found"
-           (refines_rec (R ==> Logic.eq) Op.spec_id spec) ->
-  'message "spec_refinesP_: cannot refine" (refines_rec R a a') ->
-  R (Op.spec a') b -> refines_ key R a b.
-Proof. by rewrite !nobacktrackE => *; apply: spec_refines_. Qed.
+           (with_coqeal (refines_rec (R ==> Logic.eq) Op.spec_id spec)) ->
+  'message "spec_refinesP_: cannot refine" (with_coqeal (refines_rec R a a')) ->
+  R (spec a') b -> refines_ key R a b.
+Proof. by rewrite !with_coqealE !nobacktrackE => *; apply: spec_refines_. Qed.
 
 Lemma eq_spec_refines_ key A B (R : A -> B -> Type) (a : A) (a' b : B) :
   'message "eq_spec_refines_: cannot refine" 
-           (refines_rec R a a') -> a' = b -> refines_ key R a b.
-Proof. by rewrite !nobacktrackE !refinesE => Raa' <-. Qed.
+           (with_coqeal (refines_rec R a a')) -> a' = b -> refines_ key R a b.
+Proof. by rewrite !with_coqealE !nobacktrackE !refinesE => Raa' <-. Qed.
 
 Definition spec_refines : forall A B R a a' b H, _ -> _ -> _ -> R a b :=
   @spec_refines_ tt.
@@ -388,11 +417,12 @@ Lemma refines_trans_param A B C
   (rAB : A -> B -> Type) (rBC : B -> C -> Type) (rAC : A -> C -> Type)
   (a : A) (b : B) (c : C) : 
   'message "refines_trans_param: cannot find compositionality" 
-           (composable rAB rBC rAC) ->
-  'message "refines_trans_param: cannot refine" (refines_rec rAB a b) -> 
+           (with_coqeal (composable rAB rBC rAC)) ->
+  'message "refines_trans_param: cannot refine" 
+           (with_coqeal (refines_rec rAB a b)) -> 
   rBC b c -> refines rAC a c.
 Proof.
-by rewrite !nobacktrackE !refinesE composableE => rABC rab rbc; apply: rABC; exists b.
+by rewrite !with_coqealE !nobacktrackE !refinesE composableE => rABC rab rbc; apply: rABC; exists b.
 Qed.
 
 Notation "'refines_trans_param" := (@refines_trans_param _ _ _ _ _ _ _ _ _ _ _ _).
@@ -493,6 +523,10 @@ Proof. by param double_R. Qed.
 Global Instance refines_eq_nat :
    refines (nat_R ==> nat_R ==> bool_R) eqtype.eq_op eqtype.eq_op.
 Proof. by param eqn_R. Qed.
+
+Hint Opaque fst snd : coqeal.
+Hint Opaque negb implb andb orb addb eqtype.eq_op : coqeal.
+Hint Opaque predn addn subn leq muln expn odd double : coqeal.
 
 (****************************************)
 (* Special case of identity refinements *)

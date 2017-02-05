@@ -13,7 +13,7 @@ install:
 - opam remote add coq-extra-dev https://coq.inria.fr/opam/extra-dev
 - opam remote add coq-core-dev  https://coq.inria.fr/opam/core-dev
 - opam remote add coq-released  https://coq.inria.fr/opam/released
-- opam pin add -y -v coq 8.5.dev
+- opam pin add -y -v coq 8.6
 - opam install -y -v coq-mathcomp-ssreflect.dev
 - opam install -y -v coq-mathcomp-algebra.dev
 - opam list

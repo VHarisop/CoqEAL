@@ -19,8 +19,10 @@ This archive is split in four parts:
 
 ### Installation
 
-Running `./configure.sh` should install everything you need automatically,
-provided that your Coq installation has been configured properly.
+On a Linux machine, running `./configure.sh` should install everything you
+need automatically provided that your Coq installation has been configured
+properly. Make sure you have installed `MathComp`, version >= 1.6, prior to
+running the script.
 
 
 Authors

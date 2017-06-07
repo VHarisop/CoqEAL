@@ -1874,7 +1874,7 @@ set r := (a %% b).
 case : (r == 0).
 - move => _; exact b.
 move/implyP => h.
-apply: (hi (norm r) _ b r (refl_equal (norm r))).
+apply: (hi (norm r) _ b r (erefl (norm r))).
 rewrite heq.
 by apply: h.
 Defined.
@@ -1895,12 +1895,12 @@ case r0 : ( a %% b == 0).
 - move => _.
   by rewrite dvd_mod (eqP r0) dvdr0 andbT.
 move => h2.
-rewrite (hi (norm (a %% b)) _ b (a %% b) (refl_equal (norm (a %% b))) g).
+rewrite (hi (norm (a %% b)) _ b (a %% b) (erefl (norm (a %% b))) g).
 by rewrite -{1}dvd_mod.
 Qed.
 
 Definition GCD (a b:R) : R :=
-  acc_gcd (guarded 100 lt_wf2 (norm b)) a (refl_equal (norm b)).
+  acc_gcd (guarded 100 lt_wf2 (norm b)) a (erefl (norm b)).
 
 Lemma GCDP : forall d a b, d %| GCD a b = (d %| a) && (d %| b).
 Proof. by rewrite /GCD => d a b; apply: acc_gcdP. Qed.

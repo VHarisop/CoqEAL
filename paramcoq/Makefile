@@ -20,3 +20,6 @@ distclean:
 
 install:
 	$(MAKE) -f Makefile.coq install
+
+uninstall:
+	$(MAKE) -f Makefile.coq uninstall

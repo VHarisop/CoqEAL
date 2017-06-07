@@ -17,6 +17,12 @@ This archive is split in four parts:
 - doc, tools for generating documentation out of local documentation.
 
 
+### Installation
+
+Running `./configure.sh` should install everything you need automatically,
+provided that your Coq installation has been configured properly.
+
+
 Authors
 =======
 

@@ -58,6 +58,14 @@ Class block_mx_of B :=
   block_mx_op : forall (m1 m2 n1 n2 : nat),
     B m1 n1 -> B m1 n2 -> B m2 n1 -> B m2 n2 -> B (m1 + m2) (n1 + n2).
 
+(* Extract row from matrix *)
+Class ex_row_mx_of B :=
+  ex_row_mx_op : forall (m n : nat) (i : 'I_m) , B m n -> B 1 n.
+
+(* Row submatrix class *)
+Class row_submx_of B :=
+  row_submx_op : forall (m n : nat) (k : {set 'I_m}), B m n -> B (#|k|) n.
+
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 
 Class map_mx_of A B C D :=
@@ -67,7 +75,8 @@ End classes.
 
 Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of
             lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of drsubmx_of
-            row_mx_of col_mx_of block_mx_of const_mx_of map_mx_of.
+            row_mx_of col_mx_of block_mx_of ex_row_mx_of
+            row_submx_of const_mx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -99,7 +108,7 @@ Parametricity foldl2.
 
 Section seqmx_op.
 
-Variable A B : Type.
+Variables A B : Type.
 Variable I : nat -> Type.
 
 Definition seqmx {A} := seq (seq A).
@@ -209,6 +218,18 @@ Global Instance block_seqmx : block_mx_of hseqmx :=
   fun m1 m2 n1 n2 Aul Aur Adl Adr =>
   col_seqmx (row_seqmx Aul Aur) (row_seqmx Adl Adr).
 
+(** Extracts the `i`'th row of M *)
+Global Instance ex_row_seqmx : ex_row_mx_of hseqmx :=
+  fun m n i (M : @seqmx A) => take 1 (drop i M).
+
+(** Extracts a row submatrix using the rows given by a
+   collection (sequence) of indices `I` *)
+Fixpoint row_sub_seqmx m n (I : seq 'I_m) (s : hseqmx m n) :=
+  match I with
+  | [::] => [::]
+  | h :: t => (ex_row_seqmx h s) :: (row_sub_seqmx t s)
+  end.
+
 Definition delta_seqmx m n i j : hseqmx m n :=
   mkseqmx_ord (fun (i0 : 'I_m) (j0 : 'I_n) =>
                  if (eqn i0 i) && (eqn j0 j) then 1%C else 0%C).
@@ -259,7 +280,9 @@ Parametricity dlsubseqmx.
 Parametricity drsubseqmx.
 Parametricity row_seqmx.
 Parametricity col_seqmx.
+Parametricity row_sub_seqmx.
 Parametricity block_seqmx.
+Parametricity ex_row_seqmx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
 Parametricity pid_seqmx.
@@ -519,6 +542,39 @@ Proof.
   rewrite ifN; last by rewrite ltnNge leq_addr.
   by rewrite addnC -addnBA ?subnn ?addn0.
 Qed.
+
+
+(** TODO: This fails for now *)
+Instance Rseqmx_ex_row_seqmx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2)
+  (r1 : nat_R 1 1) :
+  refines (Rseqmx rm rn ==> Rseqmx r1 rn)
+          (@matrix.row R m1 n1 k1) (@ex_row_seqmx R m2 n2 k2).
+Proof.
+  rewrite refinesE => _ _ [M sM h1 h2 h3].
+  constructor => [|i ltim2| i j]; rewrite /ex_row_seqmx.
+  - rewrite size_take size_drop h1.
+    case: (boolP ((m2 - k2) > 1)) => [ //= | ].
+    rewrite -leqNgt. have : (k2 <= m2 - 1)%N.
+    + rewrite -ltnS subn1.
+      suff k2_ltn_m2: (k2 < m2); last by rewrite ltn_ord.
+      apply: (leq_trans k2_ltn_m2); by rewrite leqSpred.
+      move => Hk2m2 Hm2k2.
+      (** TODO:
+          Should be easy to prove that k2 <= m2 - 1 -> m2 - k2 >= 1 *)
+      admit.
+  - rewrite nth_take; last by exact: ltim2.
+    rewrite nth_drop h2 //=.
+    suff -> : (i < 1) -> (i = 0)%N. by rewrite addn0; exact: ltn_ord.
+    + exact: ltim2.
+    + by case: (i) => //=.
+  - rewrite mxE nth_take; last by exact: ltn_ord.
+    rewrite nth_drop h3 -(nat_R_eq rk).
+    suff -> : (nat_of_ord i = 0)%N by rewrite addn0.
+    by rewrite zmodp.ord1.
+Admitted.
+
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
          (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22
@@ -837,6 +893,20 @@ Global Instance refine_col_seqmx m1 m2 n :
                    ==> RseqmxC (addn_R (nat_Rxx m1) (nat_Rxx m2)) (nat_Rxx n))
           (@matrix.col_mx R m1 m2 n) (@col_seqmx C m1 m2 n).
 Proof. exact: RseqmxC_col_seqmx. Qed.
+
+Global Instance RseqmxC_ex_row_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2)
+  (r1 : nat_R 1 1) :
+  refines (RseqmxC rm rn ==> RseqmxC r1 rn)
+          (@matrix.row R m1 n1 k1) (@ex_row_seqmx C m2 n2 k2).
+Proof.
+Admitted.
+
+Global Instance refine_ex_row_seqmx m n1 n2 :
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n1) ==> RseqmxC (nat_Rxx m) (nat_Rxx n2)
+                   ==> RseqmxC (nat_Rxx m) (addn_R (nat_Rxx n1) (nat_Rxx n2)))
+          (@matrix.row_mx R m n1 n2) (@row_seqmx C m n1 n2).
+Proof. exact: RseqmxC_row_seqmx. Qed.
 
 Global Instance RseqmxC_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
        (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22
@@ -1372,7 +1442,7 @@ End seqmx_theory.
 
 Section testmx.
 
-From mathcomp Require Import ssrint poly.
+From mathcomp Require Import ssrint poly matrix.
 From CoqEAL Require Import binint seqpoly binord.
 
 Goal ((0 : 'M[int]_(2,2)) == 0).
@@ -1463,6 +1533,15 @@ Goal (M + N + M + N + M + N + N + M + N) *m
 Proof.
 apply/eqP.
 Time by coqeal.
+Abort.
+
+Let Mr := \matrix_(i,j < 2) 1%num%:Z.
+Let Mrow := \matrix_(i < 1, j < 2) 1%num%:Z.
+
+Goal forall i, row i Mr == Mrow.
+Proof.
+  move => i.
+  by coqeal.
 Abort.
 
 End testmx.

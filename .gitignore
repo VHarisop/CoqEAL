@@ -13,6 +13,7 @@
 *.swp
 Makefile.coq
 *~
+*#
 
 # Ignore files built from configure.sh
 Makefile.theory
@@ -23,3 +24,6 @@ Makefile.refine
 paramcoq.a
 paramcoq.cmxa
 paramcoq_mod.ml
+
+# Ignore files created under release/
+release/

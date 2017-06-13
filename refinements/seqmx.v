@@ -326,7 +326,7 @@ CoInductive Rseqmx {m1 m2} (rm : nat_R m1 m2) {n1 n2} (rn : nat_R n1 n2) :
 (* Definition Rord n (i : 'I_n) j := i = j :> nat. *)
 
 Lemma ord_enum_eqE p : ord_enum_eq p = enum 'I_p.
-Proof. by rewrite enumT unlock; apply:eq_pmap ; exact:insub_eqE. Qed.
+Proof. by rewrite enumT unlock; apply: eq_pmap ; exact: insub_eqE. Qed.
 
 Instance Rseqmx_seqmx_of_fun m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
          f g :

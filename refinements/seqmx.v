@@ -64,7 +64,7 @@ Class ex_row_mx_of B :=
 
 (* Row submatrix class *)
 Class row_submx_of B :=
-  row_submx_op : forall (m n : nat) (k : {set 'I_m}), B m n -> B (#|k|) n.
+  row_submx_op : forall (m n : nat) (k : seq 'I_m), B m n -> B (#|k|) n.
 
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 
@@ -220,16 +220,20 @@ Global Instance block_seqmx : block_mx_of hseqmx :=
 
 (** Extracts the `i`'th row of M *)
 Global Instance ex_row_seqmx : ex_row_mx_of hseqmx :=
-  fun m n i (M : @seqmx A) => take 1 (drop i M).
+  fun m n (i : 'I_m) (M : @seqmx A) => take 1 (drop i M).
 
 (** Extracts a row submatrix using the rows given by a
    collection (sequence) of indices `I` *)
-Fixpoint row_sub_seqmx m n (I : seq 'I_m) (s : hseqmx m n) :=
+Fixpoint row_sub_seqmx_fun m n (I : seq 'I_m) (s : hseqmx m n) :=
   match I with
   | [::] => [::]
-  | h :: t => (ex_row_seqmx h s) :: (row_sub_seqmx t s)
+  | h :: t => (ex_row_seqmx h s) :: (row_sub_seqmx_fun t s)
   end.
 
+(** TODO: Fix the following
+Global Instance row_sub_seqmx : row_submx_of hseqmx :=
+  fun m n (I : seq 'I_m) (M : @seqmx A) => row_sub_seqmx_fun I M.
+*)
 Definition delta_seqmx m n i j : hseqmx m n :=
   mkseqmx_ord (fun (i0 : 'I_m) (j0 : 'I_n) =>
                  if (eqn i0 i) && (eqn j0 j) then 1%C else 0%C).
@@ -280,7 +284,6 @@ Parametricity dlsubseqmx.
 Parametricity drsubseqmx.
 Parametricity row_seqmx.
 Parametricity col_seqmx.
-Parametricity row_sub_seqmx.
 Parametricity block_seqmx.
 Parametricity ex_row_seqmx.
 Parametricity delta_seqmx.
@@ -543,8 +546,6 @@ Proof.
   by rewrite addnC -addnBA ?subnn ?addn0.
 Qed.
 
-
-(** TODO: This fails for now *)
 Instance Rseqmx_ex_row_seqmx
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2)
@@ -555,15 +556,16 @@ Proof.
   rewrite refinesE => _ _ [M sM h1 h2 h3].
   constructor => [|i ltim2| i j]; rewrite /ex_row_seqmx.
   - rewrite size_take size_drop h1.
-    case: (boolP ((m2 - k2) > 1)) => [ //= | ].
-    rewrite -leqNgt. have : (k2 <= m2 - 1)%N.
-    + rewrite -ltnS subn1.
-      suff k2_ltn_m2: (k2 < m2); last by rewrite ltn_ord.
+    case: (boolP ((m2 - k2) > 1)) => [ //= | ]; rewrite -leqNgt.
+    have : (k2 <= m2 - 1)%N.
+    + rewrite -ltnS subn1. move: (ltn_ord k2) => k2_ltn_m2.
       apply: (leq_trans k2_ltn_m2); by rewrite leqSpred.
-      move => Hk2m2 Hm2k2.
-      (** TODO:
-          Should be easy to prove that k2 <= m2 - 1 -> m2 - k2 >= 1 *)
-      admit.
+    + move => Hk2m2 Hm2k2.
+      have : (k2 - k2 <= m2 - 1 - k2)%N by apply: leq_sub.
+      rewrite subnn -subnDA addnC subnDA.
+      rewrite -(leq_add2r 1) subnK; last by rewrite subn_gt0 ltn_ord.
+      rewrite add0n => Hk2'. move {Hk2m2}.
+      apply/eqP; rewrite eqn_leq. by rewrite Hm2k2 Hk2'.
   - rewrite nth_take; last by exact: ltim2.
     rewrite nth_drop h2 //=.
     suff -> : (i < 1) -> (i = 0)%N. by rewrite addn0; exact: ltn_ord.
@@ -573,8 +575,7 @@ Proof.
     rewrite nth_drop h3 -(nat_R_eq rk).
     suff -> : (nat_of_ord i = 0)%N by rewrite addn0.
     by rewrite zmodp.ord1.
-Admitted.
-
+Qed.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
          (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22
@@ -900,6 +901,7 @@ Global Instance RseqmxC_ex_row_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R 
   refines (RseqmxC rm rn ==> RseqmxC r1 rn)
           (@matrix.row R m1 n1 k1) (@ex_row_seqmx C m2 n2 k2).
 Proof.
+  param_comp ex_row_seqmx_R.
 Admitted.
 
 Global Instance refine_ex_row_seqmx m n1 n2 :

@@ -57,22 +57,22 @@ Class col_mx_of B :=
 Class block_mx_of B :=
   block_mx_op : forall (m1 m2 n1 n2 : nat),
     B m1 n1 -> B m1 n2 -> B m2 n1 -> B m2 n2 -> B (m1 + m2) (n1 + n2).
-
-(* Extract row from matrix *)
-Class ex_row_mx_of B :=
+Class xrow_mx_of B :=
   ex_row_mx_op : forall (m n : nat), 'I_m -> B m n -> B 1 n.
-
+Class xcol_mx_of B :=
+  ex_col_mx_op : forall (m n : nat), 'I_n -> B m n -> B m 1.
+Class tran_mx_of B :=
+  tran_mx_op : forall (m n : nat), B m n -> B n m.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
-
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
 
 End classes.
 
-Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of
-            lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of drsubmx_of
-            row_mx_of col_mx_of block_mx_of ex_row_mx_of
-            const_mx_of map_mx_of.
+Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of.
+Typeclasses Transparent lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of.
+Typeclasses Transparent drsubmx_of row_mx_of col_mx_of block_mx_of.
+Typeclasses Transparent xrow_mx_of xcol_mx_of tran_mx_of const_mx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -105,6 +105,10 @@ Parametricity foldl2.
 Section seqmx_op.
 
 Variables A B : Type.
+
+(* A default witness of the type A *)
+Variable x0 : A.
+
 Variable I : nat -> Type.
 
 Definition seqmx {A} := seq (seq A).
@@ -217,9 +221,24 @@ Global Instance block_seqmx : block_mx_of hseqmx :=
   fun m1 m2 n1 n2 Aul Aur Adl Adr =>
   col_seqmx (row_seqmx Aul Aur) (row_seqmx Adl Adr).
 
-(** Extracts the `i`'th row of M *)
-Global Instance ex_row_seqmx : ex_row_mx_of hseqmx :=
+Global Instance xrow_seqmx : xrow_mx_of hseqmx :=
   fun m n i (M : @seqmx A) => take 1 (drop i M).
+
+Global Instance xcol_seqmx : xcol_mx_of hseqmx :=
+  fun m n j (M : @seqmx A) =>
+    map (fun mRow => take 1 (drop j mRow)) M.
+
+Definition guillotine (M : @seqmx A) :=
+  (map (head x0) M, map (drop 1) M).
+
+Fixpoint transpose (M : @seqmx A) m := match m with
+  | O => [::]
+  | S m' => let (m, M') := guillotine M in
+    m :: (transpose M' m')
+  end.
+
+Global Instance tran_seqmx : tran_mx_of hseqmx :=
+  fun m n (M : @seqmx A) => transpose M m.
 
 Definition delta_seqmx m n i j : hseqmx m n :=
   mkseqmx_ord (fun (i0 : 'I_m) (j0 : 'I_n) =>
@@ -272,7 +291,9 @@ Parametricity drsubseqmx.
 Parametricity row_seqmx.
 Parametricity col_seqmx.
 Parametricity block_seqmx.
-Parametricity ex_row_seqmx.
+Parametricity xrow_seqmx.
+Parametricity xcol_seqmx.
+Parametricity tran_seqmx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
 Parametricity pid_seqmx.
@@ -533,15 +554,14 @@ Proof.
   by rewrite addnC -addnBA ?subnn ?addn0.
 Qed.
 
-Instance Rseqmx_ex_row_seqmx
+Instance Rseqmx_xrow_seqmx
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2)
-  (r1 : nat_R 1 1) :
+  (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
   refines (Rseqmx rm rn ==> Rseqmx r1 rn)
-          (@matrix.row R m1 n1 k1) (@ex_row_seqmx R m2 n2 k2).
+          (@matrix.row R m1 n1 k1) (@xrow_seqmx R m2 n2 k2).
 Proof.
   rewrite refinesE => _ _ [M sM h1 h2 h3].
-  constructor => [|i ltim2| i j]; rewrite /ex_row_seqmx.
+  constructor => [|i ltim2| i j]; rewrite /xrow_seqmx.
   - rewrite size_take size_drop h1.
     case: (boolP ((m2 - k2) > 1)) => [ //= | ]; rewrite -leqNgt.
     have : (k2 <= m2 - 1)%N.
@@ -563,6 +583,33 @@ Proof.
     suff -> : (nat_of_ord i = 0)%N by rewrite addn0.
     by rewrite zmodp.ord1.
 Qed.
+
+Instance Rseqmx_xcol_seqmx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_n1) (k2 : 'I_n2) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
+  refines (Rseqmx rm rn ==> Rseqmx rm r1)
+          (@matrix.col R m1 n1 k1) (@xcol_seqmx R m2 n2 k2).
+Proof.
+  rewrite refinesE => _ _ [M sM h1 h2 h3].
+  constructor => [|i ltim2| i j]; rewrite /xcol_seqmx.
+  - by rewrite size_map h1.
+  - move: (ltim2). rewrite -h1 => lti_sMsz.
+  - rewrite (nth_map [::] [::]); last by apply: lti_sMsz.
+    rewrite size_take size_drop h2; last by apply: ltim2.
+    case: (boolP ((n2 - k2) > 1)) => [ //= | ]; rewrite -leqNgt.
+    have : (k2 <= n2 - 1)%N.
+    + rewrite -ltnS. move: (ltn_ord k2) => k2_ltn_n2.
+      apply: (leq_trans k2_ltn_n2). by rewrite subn1 leqSpred.
+    + move => Hk2n2 Hn2k2.
+      have : (k2 - k2 <= n2 - 1 - k2)%N by apply: leq_sub.
+      rewrite subnn -subnDA addnC subnDA.
+      rewrite -(leq_add2r 1) subnK; last by rewrite subn_gt0 ltn_ord.
+      rewrite add0n => Hk2'. move {Hk2n2}.
+      apply/eqP; rewrite eqn_leq. by rewrite Hn2k2 Hk2'.
+  - rewrite (nth_map [::] [::]); last first.
+    + rewrite h1 -(nat_R_eq rm). exact: ltn_ord.
+    + rewrite !mxE. (* TODO *) admit.
+Admitted.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
          (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22

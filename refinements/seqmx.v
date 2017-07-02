@@ -228,18 +228,6 @@ Global Instance xcol_seqmx : xcol_mx_of hseqmx :=
   fun m n j (M : @seqmx A) =>
     map (fun mRow => take 1 (drop j mRow)) M.
 
-Definition guillotine (M : @seqmx A) :=
-  (map (head x0) M, map (drop 1) M).
-
-Fixpoint transpose (M : @seqmx A) m := match m with
-  | O => [::]
-  | S m' => let (m, M') := guillotine M in
-    m :: (transpose M' m')
-  end.
-
-Global Instance tran_seqmx : tran_mx_of hseqmx :=
-  fun m n (M : @seqmx A) => transpose M m.
-
 Definition delta_seqmx m n i j : hseqmx m n :=
   mkseqmx_ord (fun (i0 : 'I_m) (j0 : 'I_n) =>
                  if (eqn i0 i) && (eqn j0 j) then 1%C else 0%C).
@@ -293,7 +281,6 @@ Parametricity col_seqmx.
 Parametricity block_seqmx.
 Parametricity xrow_seqmx.
 Parametricity xcol_seqmx.
-Parametricity tran_seqmx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
 Parametricity pid_seqmx.
@@ -929,19 +916,43 @@ Global Instance refine_col_seqmx m1 m2 n :
           (@matrix.col_mx R m1 m2 n) (@col_seqmx C m1 m2 n).
 Proof. exact: RseqmxC_col_seqmx. Qed.
 
-Global Instance RseqmxC_ex_row_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+Global Instance RseqmxC_xrow_seqmx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2)
   (r1 : nat_R 1 1) :
   refines (RseqmxC rm rn ==> RseqmxC r1 rn)
-          (@matrix.row R m1 n1 k1) (@ex_row_seqmx C m2 n2 k2).
+          (@matrix.row R m1 n1 k1) (@xrow_seqmx C m2 n2 k2).
 Proof.
+  (* Why does this fail now?
+  param_comp xrow_seqmx_R.
+  *)
 Admitted.
 
-Global Instance refine_ex_row_seqmx m n1 n2 :
-  refines (RseqmxC (nat_Rxx m) (nat_Rxx n1) ==> RseqmxC (nat_Rxx m) (nat_Rxx n2)
-                   ==> RseqmxC (nat_Rxx m) (addn_R (nat_Rxx n1) (nat_Rxx n2)))
-          (@matrix.row_mx R m n1 n2) (@row_seqmx C m n1 n2).
-Proof. exact: RseqmxC_row_seqmx. Qed.
+Global Instance refine_xrow_seqmx m n k:
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx 1) (nat_Rxx n))
+          (@matrix.row R m n k) (@xrow_seqmx C m n k).
+Proof.
+  apply: RseqmxC_xrow_seqmx; exact: nat_Rxx.
+Qed.
+
+Global Instance RseqmxC_xcol_seqmx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_n1) (k2 : 'I_n2) (rk : nat_R k1 k2)
+  (r1 : nat_R 1 1) :
+  refines (RseqmxC rm rn ==> RseqmxC rm r1)
+          (@matrix.col R m1 n1 k1) (@xcol_seqmx C m2 n2 k2).
+Proof.
+  (* Why does this fail now?
+  param_comp xcol_seqmx_R.
+  *)
+Admitted.
+
+Global Instance refine_xcol_seqmx m n k :
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx m) (nat_Rxx 1))
+          (@matrix.col R m n k) (@xcol_seqmx C m n k).
+Proof.
+  apply: RseqmxC_xcol_seqmx; exact: nat_Rxx.
+Qed.
 
 Global Instance RseqmxC_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
        (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22

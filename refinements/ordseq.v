@@ -86,8 +86,19 @@ Global Instance size_seqset {m} : size_of (@ordseq m) N :=
   end
   in aux 0.
 
+Local Open Scope rel_scope.
+
 (* In the spirit of Rseqmx...*)
 CoInductive Rordseq {m1 m2} (rm : nat_R m1 m2) :
   {set 'I_m1} -> @ordseq m2 -> Type := Rordseq_spec (I : {set 'I_m1}) (J : ordseq) of
   (forall j, j \in J -> ((nat_of_ord j) < m1)%N) &
   (uniq J) & (sorted ordcmp J) : Rordseq rm I J.
+
+Instance Rordseq_add {m1 m2} (rm : nat_R m1 m2)
+(I : 'I_m1) (J : (@ordseq m2)) `{Hm: spec_of N 'I_m2} :
+  refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
+  (@setU (ordinal_finType m1)) (@ordseq_add m2 Hm).
+Proof.
+  rewrite refinesE; constructor.
+  (** TODO: Do this! **)
+Admitted.

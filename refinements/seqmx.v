@@ -1581,12 +1581,4 @@ apply/eqP.
 Time by coqeal.
 Abort.
 
-Let Mr := \matrix_(i,j < 2) 1%num.
-Let Mrow := \matrix_(i < 1, j < 2) 1%num.
-
-Goal forall i, row i Mr == Mrow.
-Proof.
-  move => i. apply: refines_trans.
-Abort.
-
 End testmx.

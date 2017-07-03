@@ -19,17 +19,17 @@ Section seqset_op.
 Variable A : Type.
 Variable N : Type.
 
-Definition seqset := seq A.
+Definition seqset {A} := seq A.
 
 Context `{zero_of A, one_of A, cast_of A}.
-Context `{eq_of A}.
+Context `{add_of A, eq_of A}.
 Context `{zero_of N, one_of N, add_of N, eq_of N}.
 Context `{spec_of N nat}.
 
 Global Instance cast_seqset : cast_of A seqset := fun x => [:: x].
 
-Global Instance seqset0 : zero_of seqset := [::].
-Global Instance seqsingleton x : one_of seqset := [:: x].
+Global Instance seqset0 : zero_of (@seqset A) := [::].
+Global Instance seqsingleton x : one_of (@seqset A) := [:: x].
 
 (** Returning if an element is a member of a set *)
 Fixpoint seqset_mem (x : A) (p : seqset) : bool := match p with
@@ -49,12 +49,23 @@ Definition eq_seqset_fun (p q : seqset) : bool :=
 Global Instance eq_seqset : eq_of seqset := eq_seqset_fun.
 
 (** Size of a set *)
-Global Instance size_seqset : size_of seqset N :=
+Global Instance size_seqset : size_of (@seqset A) N :=
   let fix aux cnt p := match p with
   | [::] => cnt
   | _ :: t => aux (cnt + 1) t
   end
   in aux 0.
+
+(** Adding an element to a set *)
+Definition add_elem sset elem := if seqset_mem elem sset then sset else elem :: sset.
+
+(** Adding two seqsets *)
+Global Instance union_seqset : add_of seqset :=
+  let fix aux p elems := match p with
+  | [::] => elems
+  | h :: t => aux t (add_elem elems h)
+  end
+  in aux.
 
 End seqset_op.
 
@@ -63,3 +74,4 @@ Parametricity eq_seqset.
 Parametricity seqset0.
 Parametricity seqsingleton.
 Parametricity size_seqset.
+Parametricity union_seqset.

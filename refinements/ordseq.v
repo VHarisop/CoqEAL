@@ -59,10 +59,17 @@ Definition ordseq_sub {m} : sub_of (ordseq m) :=
   end
   in aux.
 
+Lemma ordseq_sub_is_sub {m} (I J : ordseq m) :
+  forall i, i \in ordseq_sub I J -> i \in I /\ i \notin J.
+Proof.
+  move => i; elim: I => [| h I Hind] //.
+  (* This is too much *)
+Admitted.
+
 Definition ordcmp {m} := fun (x y : 'I_m) => ((nat_of_ord x) <= (nat_of_ord y))%N.
 
 (* Union of two ordseqs *)
-Definition ordseq_add {m} `{spec_of N 'I_m} : add_of (ordseq m) :=
+Definition ordseq_add {m} : add_of (ordseq m) :=
   fun a b => merge leqn a (ordseq_sub a b).
 
 (** Returning if an element is a member of a set *)
@@ -96,10 +103,26 @@ CoInductive Rordseq {m1 m2} (rm : nat_R m1 m2) :
   (forall j, j \in J -> (j < m1)%N) &
   (uniq J) & (sorted leqn J) : Rordseq rm I J.
 
-Instance Rordseq_add {m1 m2} (rm : nat_R m1 m2)
+Instance Rordseq_sub {m1 m2} (rm : nat_R m1 m2)
 (I : 'I_m1) (J : (@ordseq m2)) `{Hm: spec_of N 'I_m2} :
   refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
-  (@setU (ordinal_finType m1)) (@ordseq_add m2 Hm).
+  (@setD (ordinal_finType m1)) (@ordseq_sub m2).
+Proof.
+  rewrite refinesE => I' J' Ho Ialt Jalt Ho' //=; constructor.
+  - move => j Hj.
+    have : (j \in J') /\ j \notin Jalt by apply: ordseq_sub_is_sub.
+    move => [Hj' _].
+    have -> : forall j, j \in J' -> (j < m1)%N. case: Ho => _.
+    + move => J0 Hex _ _ j0 Hjex. exact: Hex.
+    + rewrite //=.
+    + exact: Hj'.
+  - Search _ (uniq).
+Admitted.
+
+Instance Rordseq_add {m1 m2} (rm : nat_R m1 m2)
+(I : 'I_m1) (J : (@ordseq m2)) :
+  refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
+  (@setU (ordinal_finType m1)) (@ordseq_add m2).
 Proof.
   rewrite refinesE => I' J' Ho Ialt Jalt Ho'; constructor.
   - admit.

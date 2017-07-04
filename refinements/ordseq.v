@@ -44,18 +44,10 @@ Fixpoint ordseq_sublist {m} (p q : ordseq m) : bool :=
     end
   end.
 
-(* Difference of two ordseqs *)
 Definition ordseq_sub {m} : sub_of (ordseq m) :=
-  let fix aux (a : ordseq m) := match a with
-  | [::] => fun _ => [::]
-  | h :: t => (fix aux_comp (b : ordseq _) :=
-      match b with
-      | [::] => a
-      | h' :: t' =>
-        if (h < h')%N then h :: (aux t b)
-        else if (h == h')%N then aux t t'
-        else aux_comp t'
-      end)
+  let fix aux (a b : ordseq m) := match b with
+  | [::] => a
+  | h :: t => aux (rem h a) t
   end
   in aux.
 
@@ -67,18 +59,30 @@ Lemma ordseq_nil_sub {m} (I : ordseq m) :
   ordseq_sub [::] I = [::].
 Proof. by elim: I. Qed.
 
-Lemma ordseq_sub_is_sub {m} (I J : ordseq m) :
-  forall (i : nat), i \in ordseq_sub I J -> i \in I /\ i \notin J.
-Proof.
-  move => i; elim: J => [| j J Hind] //.
-  - rewrite ordseq_sub_nil => Hin; try by done.
-  - admit.
-  (* This is too much *)
-Admitted.
 
 Lemma ordseq_sub_sorted {m} (I J : ordseq m) :
   sorted leq I -> sorted leq J -> sorted leq (ordseq_sub I J).
 Proof.
+Admitted.
+
+Lemma rem_sorted {m} (I : ordseq m) (i : nat) :
+  sorted leq I -> sorted leq (rem i I).
+Proof.
+  move: (rem_subseq i I) => Hsub HsI.
+  apply: subseq_sorted;
+  [ exact: leq_trans |
+    exact: Hsub |
+    exact: HsI ].
+Qed.
+
+Lemma ordseq_sub_is_sub {m} (I J : ordseq m) (i : nat) :
+  (sorted leq I) -> (sorted leq J) ->
+  i \in ordseq_sub I J -> i \in I /\ i \notin J.
+Proof.
+  elim: I J => [| hi I Hind] [| j J] //.
+  - by rewrite ordseq_nil_sub //=.
+  - move => HsI HsJ.
+  (* This is too much *)
 Admitted.
 
 Definition ordcmp {m} := fun (x y : 'I_m) => ((nat_of_ord x) <= (nat_of_ord y))%N.
@@ -110,15 +114,17 @@ Proof.
 Qed.
 
 Lemma ordseq_add_is_union {m} (I J : ordseq m) :
+  sorted leq I -> sorted leq J ->
   forall (i : nat), (i \in ordseq_add I J) -> i \in I \/ i \in J.
 Proof.
-  move => i; elim I.
-  - rewrite ordseq_nil_add => Hj; by apply/orP.
-  - move => k K Hind. rewrite /ordseq_add mem_merge mem_cat.
+  move => Hi Hj i; case Icomp: I.
+  - rewrite ordseq_nil_add => ?; by apply/orP.
+  - rewrite /ordseq_add mem_merge mem_cat.
     move/orP; case => Hin; apply/orP.
     - by rewrite Hin.
-    - have : i \in J /\ (i \notin (k :: K)) by exact: ordseq_sub_is_sub.
-      move => [Hj _]; by rewrite Hj orbT.
+    - move: Hin; rewrite -Icomp => Hsub.
+      have : i \in J /\ (i \notin I) by exact: ordseq_sub_is_sub.
+      move => [Hj' _]; by rewrite Hj' orbT.
 Qed.
 
 (** Returning if an element is a member of a set *)
@@ -171,7 +177,10 @@ Instance Rordseq_sub {m1 m2} (rm : nat_R m1 m2)
 Proof.
   rewrite refinesE => I' J' Ho Ialt Jalt Ho' //=; constructor.
   - move => j Hj.
-    have : (j \in J') /\ j \notin Jalt by apply: ordseq_sub_is_sub.
+    have : (j \in J') /\ j \notin Jalt. apply: ordseq_sub_is_sub.
+    + apply: (in_ordseq_sorted _ _ J'). exact: Ho.
+    + apply: (in_ordseq_sorted _ _ Jalt). exact: Ho'.
+    + exact: Hj.
     move => [Hj' _].
     have -> : forall j, j \in J' -> (j < m1)%N. case: Ho => _.
     + move => J0 Hex _ _ j0 Hjex. exact: Hex.
@@ -190,7 +199,10 @@ Instance Rordseq_add {m1 m2} (rm : nat_R m1 m2)
 Proof.
   rewrite refinesE => I' J' Ho Ialt Jalt Ho'; constructor.
   - move => j Hjadd. have : j \in J' \/ j \in Jalt.
-    + exact: ordseq_add_is_union.
+    + apply: ordseq_add_is_union.
+      * apply: (in_ordseq_sorted _ _ J'); exact: Ho.
+      * apply: (in_ordseq_sorted _ _ Jalt); exact: Ho'.
+      * exact: Hjadd.
     + case; apply: in_ordseq_lt; [exact: Ho | exact: Ho'].
   - rewrite /ordseq_add merge_uniq cat_uniq. admit.
   - rewrite /ordseq_add merge_sorted //=.

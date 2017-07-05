@@ -45,11 +45,10 @@ Fixpoint ordseq_sublist {m} (p q : ordseq m) : bool :=
   end.
 
 Definition ordseq_sub {m} : sub_of (ordseq m) :=
-  let fix aux (a b : ordseq m) := match b with
+  let fix aux a b := match b with
   | [::] => a
   | h :: t => aux (rem h a) t
-  end
-  in aux.
+  end in aux.
 
 Lemma ordseq_sub_nil {m} (I : ordseq m) :
   ordseq_sub I [::] = I.
@@ -58,12 +57,6 @@ Proof. by elim: I. Qed.
 Lemma ordseq_nil_sub {m} (I : ordseq m) :
   ordseq_sub [::] I = [::].
 Proof. by elim: I. Qed.
-
-
-Lemma ordseq_sub_sorted {m} (I J : ordseq m) :
-  sorted leq I -> sorted leq J -> sorted leq (ordseq_sub I J).
-Proof.
-Admitted.
 
 Lemma rem_sorted {m} (I : ordseq m) (i : nat) :
   sorted leq I -> sorted leq (rem i I).
@@ -75,17 +68,44 @@ Proof.
     exact: HsI ].
 Qed.
 
+Lemma ordseq_sub_sorted {m} (I J : ordseq m) :
+  sorted leq I -> sorted leq J -> sorted leq (ordseq_sub I J).
+Proof.
+  elim: J I => [// | j J Hind] [// | i I] //.
+  - move => _ _. by rewrite ordseq_nil_sub.
+  - move => HsI HsJ. rewrite /ordseq_sub.
+    have Hs: sorted leq (rem j (i :: I)) by apply: (@rem_sorted m).
+    apply: Hind; first by exact: Hs.
+    move: (subseq_cons J j) => Hcons. apply: subseq_sorted;
+    [ exact: leq_trans | exact: Hcons | exact: HsJ].
+Qed.
+
+Lemma ordseq_sub_uniq {m} (I J : ordseq m) :
+  uniq I -> uniq J -> uniq (ordseq_sub I J).
+Proof.
+  elim: J I => [// | j J Hind] [// | i I] //.
+  - move => _ _; by rewrite ordseq_nil_sub.
+  - move => HuI. rewrite cons_uniq; move => /andP[_ HuJ].
+    have Hu: uniq (rem j (i :: I)) by apply: rem_uniq.
+    apply: Hind; first by exact: Hu.
+    done.
+Qed.
+
+Lemma rem_is_sub {m} (I : ordseq m) :
+  forall i, i \in I -> i \notin rem i I.
+Proof.
+  move => i. elim: I => [// | hi I Hind].
+Admitted.
+
 Lemma ordseq_sub_is_sub {m} (I J : ordseq m) (i : nat) :
-  (sorted leq I) -> (sorted leq J) ->
   i \in ordseq_sub I J -> i \in I /\ i \notin J.
 Proof.
-  elim: I J => [| hi I Hind] [| j J] //.
+  elim: J I => [// | j J Hind] [// | hi I] //.
   - by rewrite ordseq_nil_sub //=.
-  - move => HsI HsJ.
+  - admit.
   (* This is too much *)
 Admitted.
 
-Definition ordcmp {m} := fun (x y : 'I_m) => ((nat_of_ord x) <= (nat_of_ord y))%N.
 
 (* Union of two ordseqs *)
 Definition ordseq_add {m} : add_of (ordseq m) :=
@@ -178,8 +198,6 @@ Proof.
   rewrite refinesE => I' J' Ho Ialt Jalt Ho' //=; constructor.
   - move => j Hj.
     have : (j \in J') /\ j \notin Jalt. apply: ordseq_sub_is_sub.
-    + apply: (in_ordseq_sorted _ _ J'). exact: Ho.
-    + apply: (in_ordseq_sorted _ _ Jalt). exact: Ho'.
     + exact: Hj.
     move => [Hj' _].
     have -> : forall j, j \in J' -> (j < m1)%N. case: Ho => _.
@@ -204,12 +222,10 @@ Proof.
       * apply: (in_ordseq_sorted _ _ Jalt); exact: Ho'.
       * exact: Hjadd.
     + case; apply: in_ordseq_lt; [exact: Ho | exact: Ho'].
-  - rewrite /ordseq_add merge_uniq cat_uniq. admit.
-  - rewrite /ordseq_add merge_sorted //=.
-    + rewrite /total => x1 y1.
-      case/boolP: (leq x1 y1) => [// |].
-      by rewrite orFb -ltnNge ltn_neqAle => /andP[_ ?] //.
-    + by case: Ho.
-  - apply: ordseq_sub_sorted; apply: in_ordseq_sorted; [
-      exact: Ho' | exact: Ho ].
+  - rewrite /ordseq_add merge_uniq cat_uniq; apply/and3P; split.
+    + exact: (in_ordseq_uniq rm I' J').
+    + admit.
+    + admit.
+  - apply: ordseq_add_sorted; apply: in_ordseq_sorted;
+    [ exact: Ho | exact: Ho' ].
 Admitted.

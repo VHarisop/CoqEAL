@@ -58,9 +58,9 @@ Class block_mx_of B :=
   block_mx_op : forall (m1 m2 n1 n2 : nat),
     B m1 n1 -> B m1 n2 -> B m2 n1 -> B m2 n2 -> B (m1 + m2) (n1 + n2).
 Class row_of B :=
-  row_op : forall (m n : nat), 'I_m -> B m n -> B 1 n.
+  row_op : forall (m n : nat), nat -> B m n -> B 1 n.
 Class col_of B :=
-  col_op : forall (m n : nat), 'I_n -> B m n -> B m 1.
+  col_op : forall (m n : nat), nat -> B m n -> B m 1.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
@@ -241,6 +241,23 @@ Definition pid_seqmx m n r :=
                  if (eqn i j) && (i < r) then 1%C else 0%C).
 
 Definition copid_seqmx m r := (seqmx1 m - pid_seqmx m m r)%C.
+
+Fixpoint extract_subseqmx {m n} (M : @hseqmx A m n) (I : seq nat) :=
+  foldr (fun i acc => (seqmx_row i M) ++ acc) [::] I.
+
+(* Extract a row submatrix from M *)
+Fixpoint extract_subseqmx_fast (M : @seqmx A) (I : seq nat) : @seqmx A :=
+  let fix extract_subseq_aux s I acc_index :=
+      match s, I with
+      | x :: s', i :: I' =>
+        if i == acc_index then
+          x :: (extract_subseq_aux s' I' (acc_index.+1))
+        else
+          (extract_subseq_aux s' I (acc_index.+1))
+      | _, _ => [::]
+      end
+  in
+  extract_subseq_aux M I 0%N.
 
 End seqmx_op.
 
@@ -541,7 +558,7 @@ Qed.
 
 Instance Rseqmx_seqmx_row
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
+  (k1 : 'I_m1) (k2 : nat) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
   refines (Rseqmx rm rn ==> Rseqmx r1 rn)
           (@matrix.row R m1 n1 k1) (@seqmx_row R m2 n2 k2).
 Proof.
@@ -550,7 +567,8 @@ Proof.
   - done.
   - have Hzero (q : nat) : (q < 1)%N -> (q = 0)%N by elim: q.
     rewrite [i]Hzero; last by exact: ltim2.
-    rewrite nth0. apply: h2; exact: ltn_ord.
+    rewrite nth0 -(nat_R_eq rk); apply: h2.
+    rewrite -(nat_R_eq rm); exact: ltn_ord.
   - rewrite !mxE -(nat_R_eq rk).
     suff -> Q : nth [::] [:: Q] i = Q by exact: h3.
     by rewrite zmodp.ord1.
@@ -558,27 +576,29 @@ Qed.
 
 Instance Rseqmx_seqmx_col
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (k1 : 'I_n1) (k2 : 'I_n2) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
+  (k1 : 'I_n1) (k2 : nat) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
   refines (Rseqmx rm rn ==> Rseqmx rm r1)
           (@matrix.col R m1 n1 k1) (@seqmx_col R m2 n2 k2).
 Proof.
   rewrite refinesE => _ _ [M sM h1 h2 h3].
-  constructor => [|i ltim2| i j]; rewrite /seqmx_col.
+  constructor.
   - by rewrite size_map h1.
-  - move: (ltim2). rewrite -h1 => lti_sMsz.
-  - rewrite (nth_map [::] [::]); last by apply: lti_sMsz.
-    rewrite size_take size_drop h2; last by apply: ltim2.
+  - rewrite -h1 => i ltiSz; rewrite (nth_map [::]); last by exact: ltiSz.
+    rewrite size_take size_drop h2; last by rewrite h1 in ltiSz; exact: ltiSz.
     case: (boolP ((n2 - k2) > 1)) => [ //= | ]; rewrite -leqNgt.
     have : (k2 <= n2 - 1)%N.
-    + rewrite -ltnS. move: (ltn_ord k2) => k2_ltn_n2.
+    + rewrite -ltnS. move: (ltn_ord k1).
+      rewrite (nat_R_eq rk) (nat_R_eq rn) => k2_ltn_n2.
       apply: (leq_trans k2_ltn_n2). by rewrite subn1 leqSpred.
     + move => Hk2n2 Hn2k2.
       have : (k2 - k2 <= n2 - 1 - k2)%N by apply: leq_sub.
       rewrite subnn -subnDA addnC subnDA.
-      rewrite -(leq_add2r 1) subnK; last by rewrite subn_gt0 ltn_ord.
-      rewrite add0n => Hk2'. move {Hk2n2}.
-      apply/eqP; rewrite eqn_leq. by rewrite Hn2k2 Hk2'.
-  - rewrite (nth_map [::] [::]); last first.
+      rewrite -(leq_add2r 1) subnK; last first.
+      * move: (ltn_ord k1). rewrite (nat_R_eq rk) (nat_R_eq rn) => Hnk.
+        by rewrite subn_gt0.
+      * rewrite add0n => Hk2'. move {Hk2n2}.
+        apply/eqP; rewrite eqn_leq. by rewrite Hn2k2 Hk2'.
+  - move => i j. rewrite (nth_map [::] [::]); last first.
     + rewrite h1 -(nat_R_eq rm). exact: ltn_ord.
     + rewrite !mxE nth_take // -(nat_R_eq rk).
 Admitted.
@@ -908,6 +928,7 @@ Global Instance RseqmxC_xrow_seqmx
   refines (RseqmxC rm rn ==> RseqmxC r1 rn)
           (@matrix.row R m1 n1 k1) (@seqmx_row C m2 n2 k2).
 Proof.
+  rewrite refinesE /RseqmxC => x' y'.
   (* param_comp seqmx_row_R. *)
   (* Why does this fail now? *)
 Admitted.

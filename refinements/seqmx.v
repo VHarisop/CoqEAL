@@ -564,15 +564,15 @@ Instance Rseqmx_seqmx_row
           (@matrix.row R m1 n1 k1) (@seqmx_row R m2 n2 k2).
 Proof.
   rewrite refinesE => _ _ [M sM h1 h2 h3].
-  constructor => [|i ltim2| i j]; rewrite /seqmx_row.
-  - done.
-  - have Hzero (q : nat) : (q < 1)%N -> (q = 0)%N by elim: q.
-    rewrite [i]Hzero; last by exact: ltim2.
-    rewrite nth0 -(nat_R_eq rk); apply: h2.
-    rewrite -(nat_R_eq rm); exact: ltn_ord.
+  constructor => [ | i ltim2 | i j]; rewrite /seqmx_row; first by done.
+  - move: ltim2; rewrite ltnS leqn0 => /eqP -> /=.
+    apply: h2.
+    + rewrite -(nat_R_eq rk) -(nat_R_eq rm).
+      exact: ltn_ord.
   - rewrite !mxE -(nat_R_eq rk).
-    suff -> Q : nth [::] [:: Q] i = Q by exact: h3.
-    by rewrite zmodp.ord1.
+    rewrite h3.
+    suff -> /=: (nat_of_ord i = 0)%N by done.
+    + by move: (ltn_ord i); rewrite ltnS leqn0 => /eqP.
 Qed.
 
 Instance Rseqmx_seqmx_col

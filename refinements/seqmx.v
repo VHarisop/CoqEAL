@@ -57,10 +57,10 @@ Class col_mx_of B :=
 Class block_mx_of B :=
   block_mx_op : forall (m1 m2 n1 n2 : nat),
     B m1 n1 -> B m1 n2 -> B m2 n1 -> B m2 n2 -> B (m1 + m2) (n1 + n2).
-Class row_of B :=
-  row_op : forall (m n : nat), nat -> B m n -> B 1 n.
-Class col_of B :=
-  col_op : forall (m n : nat), nat -> B m n -> B m 1.
+Class row_of B I :=
+  row_op : forall (m n : nat), I m -> B m n -> B 1 n.
+Class col_of B I :=
+  col_op : forall (m n : nat), I n -> B m n -> B m 1.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
@@ -111,6 +111,7 @@ Variable I : nat -> Type.
 
 Definition seqmx {A} := seq (seq A).
 Definition hseqmx {A} := fun (_ _ : nat) => @seqmx A.
+Definition hord := fun (_ : nat) => nat.
 
 (** The definition for a row matrix created by an ordinal *)
 Definition hexseqmx {A} := fun (m _ : nat) (_ : 'I_m) => @seqmx A.
@@ -219,10 +220,10 @@ Global Instance block_seqmx : block_mx_of hseqmx :=
   fun m1 m2 n1 n2 Aul Aur Adl Adr =>
   col_seqmx (row_seqmx Aul Aur) (row_seqmx Adl Adr).
 
-Global Instance seqmx_row : row_of hseqmx :=
+Global Instance seqmx_row : row_of hseqmx hord :=
   fun m n i (M : @seqmx A) => [:: nth [::] M i].
 
-Global Instance seqmx_col : col_of hseqmx :=
+Global Instance seqmx_col : col_of hseqmx hord :=
   fun m n j (M : @seqmx A) =>
     map (fun mRow => take 1 (drop j mRow)) M.
 
@@ -574,6 +575,10 @@ Proof.
     by rewrite zmodp.ord1.
 Qed.
 
+
+Lemma nth_dropped {T : Type} {x0 : T} s k : nth x0 (drop k s) 0 = nth x0 s k.
+Proof. by rewrite nth_drop addn0. Qed.
+
 Instance Rseqmx_seqmx_col
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (k1 : 'I_n1) (k2 : nat) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
@@ -601,7 +606,8 @@ Proof.
   - move => i j. rewrite (nth_map [::] [::]); last first.
     + rewrite h1 -(nat_R_eq rm). exact: ltn_ord.
     + rewrite !mxE nth_take // -(nat_R_eq rk).
-Admitted.
+      by rewrite zmodp.ord1 nth_drop addn0; exact: h3.
+Qed.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
          (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22
@@ -921,9 +927,9 @@ Global Instance refine_col_seqmx m1 m2 n :
           (@matrix.col_mx R m1 m2 n) (@col_seqmx C m1 m2 n).
 Proof. exact: RseqmxC_col_seqmx. Qed.
 
-Global Instance RseqmxC_xrow_seqmx
+Global Instance RseqmxC_seqmx_row
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (k1 : 'I_m1) (k2 : 'I_m2) (rk : nat_R k1 k2)
+  (k1 : 'I_m1) k2 (rk : nat_R k1 k2)
   (r1 : nat_R 1 1) :
   refines (RseqmxC rm rn ==> RseqmxC r1 rn)
           (@matrix.row R m1 n1 k1) (@seqmx_row C m2 n2 k2).
@@ -937,26 +943,26 @@ Global Instance refine_xrow_seqmx m n k:
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx 1) (nat_Rxx n))
           (@matrix.row R m n k) (@seqmx_row C m n k).
 Proof.
-  apply: RseqmxC_xrow_seqmx; exact: nat_Rxx.
+  apply: RseqmxC_seqmx_row; exact: nat_Rxx.
 Qed.
 
-Global Instance RseqmxC_xcol_seqmx
+Global Instance RseqmxC_seqmx_col
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (k1 : 'I_n1) (k2 : 'I_n2) (rk : nat_R k1 k2)
+  (k1 : 'I_n1) k2 (rk : nat_R k1 k2)
   (r1 : nat_R 1 1) :
   refines (RseqmxC rm rn ==> RseqmxC rm r1)
           (@matrix.col R m1 n1 k1) (@seqmx_col C m2 n2 k2).
 Proof.
   (* Why does this fail now?
-  param_comp xcol_seqmx_R.
+  param_comp seqmx_col_R.
   *)
 Admitted.
 
-Global Instance refine_xcol_seqmx m n k :
+Global Instance refine_seqmx_col m n k :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx m) (nat_Rxx 1))
           (@matrix.col R m n k) (@seqmx_col C m n k).
 Proof.
-  apply: RseqmxC_xcol_seqmx; exact: nat_Rxx.
+  apply: RseqmxC_seqmx_col; exact: nat_Rxx.
 Qed.
 
 Global Instance RseqmxC_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22

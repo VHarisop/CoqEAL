@@ -180,7 +180,7 @@ CoInductive Rordseq {m1 m2} (rm : nat_R m1 m2) :
 
 Lemma in_ordseq_lt {m1 m2} (rm : nat_R m1 m2) I J (j : nat) :
   Rordseq rm I J -> j \in J -> (j < m1)%N.
-Proof. case. move => _ ? Hind _ _ Hin. by apply: Hind. Qed.
+Proof. case. move => _ ? Hind _ _ ?. by apply: Hind. Qed.
 
 Lemma in_ordseq_uniq {m1 m2} (rm : nat_R m1 m2) I J :
   Rordseq rm I J -> uniq J.
@@ -191,7 +191,7 @@ Lemma in_ordseq_sorted {m1 m2} (rm : nat_R m1 m2) I J :
 Proof. by case. Qed.
 
 Instance Rordseq_sub {m1 m2} (rm : nat_R m1 m2)
-(I : 'I_m1) (J : (@ordseq m2)) `{Hm: spec_of N 'I_m2} :
+(I : 'I_m1) (J : (@ordseq m2)) :
   refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
   (@setD (ordinal_finType m1)) (@ordseq_sub m2).
 Proof.
@@ -204,11 +204,13 @@ Proof.
     + move => J0 Hex _ _ j0 Hjex. exact: Hex.
     + rewrite //=.
     + exact: Hj'.
-  - Search _ (uniq). admit.
-  - apply: ordseq_sub_sorted.
-    + exact: (in_ordseq_sorted rm I' J').
-    + exact: (in_ordseq_sorted rm Ialt Jalt).
-Admitted.
+  - apply: ordseq_sub_uniq; [
+      exact: in_ordseq_uniq Ho |
+      exact: in_ordseq_uniq Ho' ]. 
+  - apply: ordseq_sub_sorted; [
+      exact: (in_ordseq_sorted rm I' J') |
+      exact: (in_ordseq_sorted rm Ialt Jalt) ].
+Qed.
 
 Instance Rordseq_add {m1 m2} (rm : nat_R m1 m2)
 (I : 'I_m1) (J : (@ordseq m2)) :
@@ -224,8 +226,11 @@ Proof.
     + case; apply: in_ordseq_lt; [exact: Ho | exact: Ho'].
   - rewrite /ordseq_add merge_uniq cat_uniq; apply/and3P; split.
     + exact: (in_ordseq_uniq rm I' J').
-    + admit.
-    + admit.
+    + apply/hasPn => x Hnot. have [_ ->] : x \in Jalt /\ x \notin J'.
+      * by exact: ordseq_sub_is_sub.
+      * done.
+    + apply: ordseq_sub_uniq; [
+      exact: in_ordseq_uniq Ho' | exact: in_ordseq_uniq Ho ].
   - apply: ordseq_add_sorted; apply: in_ordseq_sorted;
     [ exact: Ho | exact: Ho' ].
-Admitted.
+Qed.

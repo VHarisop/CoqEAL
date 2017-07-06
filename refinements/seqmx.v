@@ -1590,4 +1590,24 @@ apply/eqP.
 Time by coqeal.
 Abort.
 
+Goal (row ord0 M) == (row (Ordinal (erefl (1 < 2))) M).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (row ord0 P) != (row ord0 N).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (col ord0 M) == (col (Ordinal (erefl (1 < 2))) M).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (col ord0 P) != (col ord0 N).
+Proof.
+  Time by coqeal.
+Abort.
+
 End testmx.

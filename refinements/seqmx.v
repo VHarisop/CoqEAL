@@ -61,6 +61,8 @@ Class row_of B I :=
   row_op : forall (m n : nat), I m -> B m n -> B 1 n.
 Class col_of B I :=
   col_op : forall (m n : nat), I n -> B m n -> B m 1.
+Class row_submx_of B S :=
+  row_submx_op : forall (m n k: nat), B m n -> S m k -> B k n. 
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
@@ -112,6 +114,7 @@ Variable I : nat -> Type.
 Definition seqmx {A} := seq (seq A).
 Definition hseqmx {A} := fun (_ _ : nat) => @seqmx A.
 Definition hord := fun (_ : nat) => nat.
+Definition hset := fun (_ _ : nat) => seq nat.
 
 (** The definition for a row matrix created by an ordinal *)
 Definition hexseqmx {A} := fun (m _ : nat) (_ : 'I_m) => @seqmx A.
@@ -226,6 +229,10 @@ Global Instance seqmx_row : row_of hseqmx hord :=
 Global Instance seqmx_col : col_of hseqmx hord :=
   fun m n j (M : @seqmx A) =>
     map (fun mRow => take 1 (drop j mRow)) M.
+
+Global Instance seqmx_row_submx : row_submx_of hseqmx hset :=
+  fun m n k (M : @seqmx A) J =>
+    foldr (fun j res => (nth [::] M j)::res) [::] J.
 
 Definition delta_seqmx m n i j : hseqmx m n :=
   mkseqmx_ord (fun (i0 : 'I_m) (j0 : 'I_n) =>
@@ -930,8 +937,8 @@ Global Instance RseqmxC_seqmx_row
   refines (RseqmxC rm rn ==> RseqmxC r1 rn)
           (@matrix.row R m1 n1 k1) (@seqmx_row C m2 n2 k2).
 Proof.
-  eapply refines_trans; tc.
-  - apply: Rseqmx_seqmx_row; exact: rk.
+  eapply (refines_trans (b := (seqmx_row k2))); tc.
+  - exact: Rseqmx_seqmx_row.
   - rewrite refinesE => // *.
     move => ? ?; apply: seqmx_row_R; repeat exact: nat_Rxx.
 Qed.

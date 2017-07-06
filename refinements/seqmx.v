@@ -571,7 +571,7 @@ Proof.
       exact: ltn_ord.
   - rewrite !mxE -(nat_R_eq rk).
     rewrite h3.
-    suff -> /=: (nat_of_ord i = 0)%N by done.
+    suff -> /=: ((i: nat) = 0)%N by done.
     + by move: (ltn_ord i); rewrite ltnS leqn0 => /eqP.
 Qed.
 

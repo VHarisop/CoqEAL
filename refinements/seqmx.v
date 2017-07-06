@@ -2,6 +2,7 @@ From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat div seq ssra
 From mathcomp Require Import path choice fintype tuple finset bigop poly matrix mxpoly.
 
 From CoqEAL Require Import hrel param refinements trivial_seq.
+From Polyhedra Require Import row_submx.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -62,7 +63,7 @@ Class row_of B I :=
 Class col_of B I :=
   col_op : forall (m n : nat), I n -> B m n -> B m 1.
 Class row_submx_of B S :=
-  row_submx_op : forall (m n k: nat), B m n -> S m k -> B k n. 
+  row_submx_op : forall (m n k: nat), S m k -> B m n -> B k n.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
@@ -72,7 +73,7 @@ End classes.
 Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of.
 Typeclasses Transparent lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of.
 Typeclasses Transparent drsubmx_of row_mx_of col_mx_of block_mx_of.
-Typeclasses Transparent row_of col_of const_mx_of map_mx_of.
+Typeclasses Transparent row_of col_of const_mx_of row_submx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -231,8 +232,8 @@ Global Instance seqmx_col : col_of hseqmx hord :=
     map (fun mRow => take 1 (drop j mRow)) M.
 
 Global Instance seqmx_row_submx : row_submx_of hseqmx hset :=
-  fun m n k (M : @seqmx A) J =>
-    foldr (fun j res => (nth [::] M j)::res) [::] J.
+  fun m n k J (M : @seqmx A) =>
+    foldr (fun j res => (nth [::] M j) :: res) [::] J.
 
 Definition delta_seqmx m n i j : hseqmx m n :=
   mkseqmx_ord (fun (i0 : 'I_m) (j0 : 'I_n) =>
@@ -249,9 +250,6 @@ Definition pid_seqmx m n r :=
                  if (eqn i j) && (i < r) then 1%C else 0%C).
 
 Definition copid_seqmx m r := (seqmx1 m - pid_seqmx m m r)%C.
-
-Fixpoint extract_subseqmx {m n} (M : @hseqmx A m n) (I : seq nat) :=
-  foldr (fun i acc => (seqmx_row i M) ++ acc) [::] I.
 
 (* Extract a row submatrix from M *)
 Fixpoint extract_subseqmx_fast (M : @seqmx A) (I : seq nat) : @seqmx A :=
@@ -304,6 +302,7 @@ Parametricity col_seqmx.
 Parametricity block_seqmx.
 Parametricity seqmx_row.
 Parametricity seqmx_col.
+Parametricity seqmx_row_submx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
 Parametricity pid_seqmx.
@@ -611,6 +610,39 @@ Proof.
     + rewrite !mxE nth_take // -(nat_R_eq rk).
       by rewrite zmodp.ord1 nth_drop addn0; exact: h3.
 Qed.
+
+Definition seq_from_set {m} (I : {set 'I_m}) :=
+  [seq val i | i <- enum I].
+
+Lemma seq_from_set_size {m} (I : {set 'I_m}) :
+  size (seq_from_set I) = #|I|.
+Proof.
+  by rewrite /seq_from_set size_map cardE.
+Qed.
+
+Lemma size_foldr_cons {T T'} (S : seq T) (f : T -> T') :
+  size (foldr (fun j res => (f j) :: res) [::] S) = size S.
+Proof.
+  elim: S => [// | s S Hind] //.
+  have Hcons x X : size (x :: X) = (size X).+1 by done.
+  by rewrite /foldr !Hcons Hind.
+Qed.
+
+Instance Rseqmx_seqmx_row_submx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  J1 J2 (rj : list_R nat_R (seq_from_set J1) J2) k (rk : nat_R #|J1| k):
+  refines (Rseqmx rm rn ==> Rseqmx rk rn)
+          (fun M => @row_submx R m1 n1 M J1)
+          (@seqmx_row_submx R m2 n2 k J2).
+Proof.
+  rewrite refinesE => _ _ [M1 sM1 h11 h21 h31].
+  constructor.
+  - rewrite /seqmx_row_submx size_foldr_cons.
+    rewrite -(nat_R_eq rk) -seq_from_set_size.
+    (* How to use rj (list_R) here? *) admit.
+  - move => i ltik. rewrite /seqmx_row_submx. admit.
+  - admit.
+Admitted.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
          (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22

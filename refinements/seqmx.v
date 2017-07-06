@@ -575,10 +575,6 @@ Proof.
     by rewrite zmodp.ord1.
 Qed.
 
-
-Lemma nth_dropped {T : Type} {x0 : T} s k : nth x0 (drop k s) 0 = nth x0 s k.
-Proof. by rewrite nth_drop addn0. Qed.
-
 Instance Rseqmx_seqmx_col
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (k1 : 'I_n1) (k2 : nat) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
@@ -934,10 +930,11 @@ Global Instance RseqmxC_seqmx_row
   refines (RseqmxC rm rn ==> RseqmxC r1 rn)
           (@matrix.row R m1 n1 k1) (@seqmx_row C m2 n2 k2).
 Proof.
-  rewrite refinesE /RseqmxC => x' y'.
-  (* param_comp seqmx_row_R. *)
-  (* Why does this fail now? *)
-Admitted.
+  eapply refines_trans; tc.
+  - apply: Rseqmx_seqmx_row; exact: rk.
+  - rewrite refinesE => // *.
+    move => ? ?; apply: seqmx_row_R; repeat exact: nat_Rxx.
+Qed.
 
 Global Instance refine_xrow_seqmx m n k:
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx 1) (nat_Rxx n))
@@ -953,10 +950,11 @@ Global Instance RseqmxC_seqmx_col
   refines (RseqmxC rm rn ==> RseqmxC rm r1)
           (@matrix.col R m1 n1 k1) (@seqmx_col C m2 n2 k2).
 Proof.
-  (* Why does this fail now?
-  param_comp seqmx_col_R.
-  *)
-Admitted.
+   eapply refines_trans; tc.
+  - apply: Rseqmx_seqmx_col; exact: rk.
+  - rewrite refinesE => // *.
+    move => ? ?; apply: seqmx_col_R; repeat exact: nat_Rxx.
+Qed.
 
 Global Instance refine_seqmx_col m n k :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx m) (nat_Rxx 1))

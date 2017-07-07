@@ -651,21 +651,25 @@ Proof.
   - move => i ltik. rewrite /seqmx_row_submx -foldr_map.
     rewrite (nth_map [::]); last first.
     + by rewrite size_map -Hseq seq_from_set_size (nat_R_eq rk).
-    + have i_size_J2: i < size J2.
-      * rewrite -Hseq seq_from_set_size.
-        by rewrite (nat_R_eq rk).
-      rewrite (nth_map 0%N) //.
-      apply: h21.
+    + have i_size_J2: i < size J2
+        by rewrite -Hseq seq_from_set_size (nat_R_eq rk).
+      rewrite (nth_map 0%N) //; apply: h21.
       move/(mem_nth 0%N): i_size_J2.
-      set i' := nth 0%N J2 i.
       rewrite -Hseq; move/mapP => [i'' _ ->] /=.
-      rewrite -[X in (_ < X)%N](nat_R_eq rm).
-      exact: ltn_ord.
+      rewrite -[X in (_ < X)%N](nat_R_eq rm); exact: ltn_ord.
   - move => i j. rewrite !mxE.
     suff -> : nth [::] (seqmx_row_submx J2 sM1) i = nth [::] sM1 (enum_val i).
     + exact: h31.
-    + admit.
-Admitted.
+    + move => ? ? ?. rewrite /seqmx_row_submx -foldr_map.
+      rewrite (nth_map [::]); last first.
+      * rewrite size_map -Hseq seq_from_set_size. exact: ltn_ord.
+      * rewrite (nth_map 0%N); last first.
+        - rewrite -Hseq seq_from_set_size. exact: ltn_ord.
+        - rewrite -Hseq /seq_from_set.
+          rewrite [nth 0%N _ _](nth_map (enum_val i)); last first.
+          + rewrite -[X in (i < X)%N]cardE. exact: ltn_ord.
+          + by rewrite [in RHS](enum_val_nth (enum_val i)) //=.
+Qed.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
          (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22

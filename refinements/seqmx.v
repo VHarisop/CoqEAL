@@ -651,15 +651,16 @@ Proof.
   - move => i ltik. rewrite /seqmx_row_submx -foldr_map.
     rewrite (nth_map [::]); last first.
     + by rewrite size_map -Hseq seq_from_set_size (nat_R_eq rk).
-    + suff -> : forall f, nth [::] [seq f j | j <- J2] i = f i.
-      * apply: h21. rewrite -(nat_R_eq rm).
-        have Hsize : (#|J1| <= m1)%N by rewrite -{5}(@card_ord m1) max_card.
-        rewrite (nat_R_eq rk) leq_eqVlt in Hsize; move/orP: Hsize; case.
-        - by move/eqP <-.
-        - move: ltik. exact: ltn_trans.
-      * move => T f. rewrite (nth_map 0%N [::]); last first.
-        - by rewrite -Hseq seq_from_set_size (nat_R_eq rk).
-        - admit.
+    + have i_size_J2: i < size J2.
+      * rewrite -Hseq seq_from_set_size.
+        by rewrite (nat_R_eq rk).
+      rewrite (nth_map 0%N) //.
+      apply: h21.
+      move/(mem_nth 0%N): i_size_J2.
+      set i' := nth 0%N J2 i.
+      rewrite -Hseq; move/mapP => [i'' _ ->] /=.
+      rewrite -[X in (_ < X)%N](nat_R_eq rm).
+      exact: ltn_ord.
   - move => i j. rewrite !mxE.
     suff -> : nth [::] (seqmx_row_submx J2 sM1) i = nth [::] sM1 (enum_val i).
     + exact: h31.

@@ -181,6 +181,14 @@ Fixpoint eq_seq T f (s1 s2 : seq T) :=
   | _, _ => false
   end.
 
+(* Required in Rseqmx_seqmx_row_submx *)
+Lemma list_R_nat_R_eq (x y : seq nat) :
+  list_R nat_R x y -> x = y.
+Proof.
+  elim => [// | hP P Hnatr hQ Q _ ->].
+  by rewrite [hP](nat_R_eq Hnatr).
+Qed.
+
 Global Instance eq_seqmx : eq_of (@seqmx A) := eq_seq (eq_seq eq_op).
 
 Global Instance top_left_seqmx : top_left_of seqmx A :=
@@ -636,12 +644,24 @@ Instance Rseqmx_seqmx_row_submx
           (@seqmx_row_submx R m2 n2 k J2).
 Proof.
   rewrite refinesE => _ _ [M1 sM1 h11 h21 h31].
+  have Hseq : (seq_from_set J1) = J2 by exact: list_R_nat_R_eq.
   constructor.
   - rewrite /seqmx_row_submx size_foldr_cons.
-    rewrite -(nat_R_eq rk) -seq_from_set_size.
-    (* How to use rj (list_R) here? *) admit.
-  - move => i ltik. rewrite /seqmx_row_submx. admit.
-  - admit.
+    by rewrite -(nat_R_eq rk) -seq_from_set_size Hseq.
+  - move => i ltik. rewrite /seqmx_row_submx -foldr_map.
+    rewrite (nth_map [::]); last first.
+    + by rewrite size_map -Hseq seq_from_set_size (nat_R_eq rk).
+    + suff -> : forall f, nth [::] [seq f j | j <- J2] i = f i.
+      * apply: h21. rewrite -(nat_R_eq rm).
+        have Hsize : (#|J1| <= m1)%N by rewrite -{5}(@card_ord m1) max_card.
+        rewrite (nat_R_eq rk) leq_eqVlt in Hsize; move/orP: Hsize; case.
+        - by move/eqP <-.
+        - move: ltik. exact: ltn_trans.
+      * move => T f. admit.
+  - move => i j. rewrite !mxE.
+    suff -> : nth [::] (seqmx_row_submx J2 sM1) i = nth [::] sM1 (enum_val i).
+    + exact: h31.
+    + admit.
 Admitted.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22

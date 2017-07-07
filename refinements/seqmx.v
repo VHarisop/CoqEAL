@@ -657,7 +657,9 @@ Proof.
         rewrite (nat_R_eq rk) leq_eqVlt in Hsize; move/orP: Hsize; case.
         - by move/eqP <-.
         - move: ltik. exact: ltn_trans.
-      * move => T f. admit.
+      * move => T f. rewrite (nth_map 0%N [::]); last first.
+        - by rewrite -Hseq seq_from_set_size (nat_R_eq rk).
+        - admit.
   - move => i j. rewrite !mxE.
     suff -> : nth [::] (seqmx_row_submx J2 sM1) i = nth [::] sM1 (enum_val i).
     + exact: h31.

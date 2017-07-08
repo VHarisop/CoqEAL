@@ -111,6 +111,7 @@ Variables A B : Type.
 Variable x0 : A.
 
 Variable I : nat -> Type.
+Variable F : nat -> nat -> Type.
 
 Definition seqmx {A} := seq (seq A).
 Definition hseqmx {A} := fun (_ _ : nat) => @seqmx A.
@@ -122,6 +123,7 @@ Definition hexseqmx {A} := fun (m _ : nat) (_ : 'I_m) => @seqmx A.
 
 Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A}.
 Context `{forall n, implem_of 'I_n (I n)}.
+Context `{forall m k, implem_of {set 'I_m} (F m k)}.
 
 Definition ord_enum_eq n : seq 'I_n := pmap (insub_eq _) (iota 0 n).
 
@@ -1336,10 +1338,12 @@ Section seqmx_ring_param.
 
 Context (C : Type) (rAC : R -> C -> Type).
 Context (I : nat -> Type)
+        (F : nat -> nat -> Type)
         (rI : forall n1 n2, nat_R n1 n2 -> 'I_n1 -> I n2 -> Type).
 Context `{zero_of C, one_of C, opp_of C, add_of C, mul_of C, eq_of C}.
 Context `{spec_of C R}.
 Context `{forall n, implem_of 'I_n (I n)}.
+Context `{forall m k, implem_of {set 'I_m} (F m k)}.
 Context `{!refines rAC 0%R 0%C, !refines rAC 1%R 1%C}.
 Context `{!refines (rAC ==> rAC) -%R -%C}.
 Context `{!refines (rAC ==> rAC ==> rAC) +%R +%C}.
@@ -1692,6 +1696,11 @@ Proof.
   Time by coqeal.
 Abort.
 
+Goal (M *m (row ord0 M)^T) == (M *m (row (Ordinal (erefl (1 < 2))) M)^T).
+Proof.
+  Time by coqeal.
+Abort.
+
 Goal (row ord0 P) != (row ord0 N).
 Proof.
   Time by coqeal.
@@ -1716,8 +1725,9 @@ Definition tM :=
 Definition tSub :=
   \matrix_(i < #|tS|, j < 5) ((nat_of_ord i) + (nat_of_ord j))%:Z.
 
-Goal (@row_submx int 5 5 tM tS) == tSub.
+Goal (row_submx tM tS) == tSub.
 Proof.
   Fail by coqeal.
 Abort.
+
 End testmx.

@@ -63,7 +63,7 @@ Class row_of B I :=
 Class col_of B I :=
   col_op : forall (m n : nat), I n -> B m n -> B m 1.
 Class row_submx_of B S :=
-  row_submx_op : forall (m n k: nat), S m k -> B m n -> B k n.
+  row_submx_op : forall (m n k : nat), S m k -> B m n -> B k n.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
@@ -182,7 +182,7 @@ Fixpoint eq_seq T f (s1 s2 : seq T) :=
   end.
 
 (* Required in Rseqmx_seqmx_row_submx *)
-Lemma list_R_nat_R_eq (x y : seq nat) :
+Lemma list_R_nat_R_eq x y :
   list_R nat_R x y -> x = y.
 Proof.
   elim => [// | hP P Hnatr hQ Q _ ->].
@@ -247,7 +247,7 @@ Global Instance seqmx_col : col_of hseqmx hord :=
     map (fun mRow => take 1 (drop j mRow)) M.
 
 Global Instance seqmx_row_submx : row_submx_of hseqmx hset :=
-  fun m n k J (M : @seqmx A) =>
+  fun m n _ J (M : @seqmx A) =>
     foldr (fun j res => (nth [::] M j) :: res) [::] J.
 
 Definition delta_seqmx m n i j : hseqmx m n :=
@@ -765,9 +765,11 @@ Section seqmx_param.
 Context (C : Type) (rAC : R -> C -> Type).
 Context (I : nat -> Type)
         (rI : forall n1 n2, nat_R n1 n2 -> 'I_n1 -> I n2 -> Type).
+Context (F : nat -> nat -> Type).
 Context `{zero_of C, one_of C, opp_of C, add_of C, mul_of C, eq_of C}.
 Context `{spec_of C R}.
 Context `{forall n, implem_of 'I_n (I n)}.
+Context `{forall m k, implem_of {set 'I_m} (F m k)}.
 Context `{!refines rAC 0%C 0%C, !refines rAC 1%C 1%C}.
 Context `{!refines (rAC ==> rAC) -%C -%C}.
 Context `{!refines (rAC ==> rAC ==> rAC) +%C +%C}.
@@ -1705,4 +1707,17 @@ Proof.
   Time by coqeal.
 Abort.
 
+(* Test subset for row submx *)
+Definition tS := [set i | i in [::
+  Ordinal (erefl (0 < 5)); Ordinal (erefl (1 < 5)); Ordinal (erefl (2 < 5))]].
+
+Definition tM :=
+  \matrix_(i < 5, j < 5) ((nat_of_ord i) + (nat_of_ord j))%:Z.
+Definition tSub :=
+  \matrix_(i < #|tS|, j < 5) ((nat_of_ord i) + (nat_of_ord j))%:Z.
+
+Goal (@row_submx int 5 5 tM tS) == tSub.
+Proof.
+  Fail by coqeal.
+Abort.
 End testmx.

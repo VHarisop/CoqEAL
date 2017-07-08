@@ -189,6 +189,13 @@ Proof.
   by rewrite [hP](nat_R_eq Hnatr).
 Qed.
 
+Lemma list_R_nat_Rxx : forall x, list_R nat_R x x.
+Proof.
+  elim => [//= | hP P Hind].
+  - exact: list_R_nil_R.
+  - apply: list_R_cons_R; [ exact: nat_Rxx | exact: Hind].
+Qed.
+
 Global Instance eq_seqmx : eq_of (@seqmx A) := eq_seq (eq_seq eq_op).
 
 Global Instance top_left_seqmx : top_left_of seqmx A :=
@@ -1002,7 +1009,7 @@ Proof.
     move => ? ?; apply: seqmx_row_R; repeat exact: nat_Rxx.
 Qed.
 
-Global Instance refine_xrow_seqmx m n k:
+Global Instance refine_seqmx_row m n k:
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx 1) (nat_Rxx n))
           (@matrix.row R m n k) (@seqmx_row C m n k).
 Proof.
@@ -1027,6 +1034,28 @@ Global Instance refine_seqmx_col m n k :
           (@matrix.col R m n k) (@seqmx_col C m n k).
 Proof.
   apply: RseqmxC_seqmx_col; exact: nat_Rxx.
+Qed.
+
+Global Instance RseqmxC_seqmx_row_submx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  J1 J2 (rj : list_R nat_R (seq_from_set J1) J2) k (rk : nat_R #|J1| k):
+  refines (RseqmxC rm rn ==> RseqmxC rk rn)
+          (fun M => @row_submx R m1 n1 M J1)
+          (@seqmx_row_submx C m2 n2 k J2).
+Proof.
+  eapply refines_trans; tc.
+  - apply: Rseqmx_seqmx_row_submx; exact: rj.
+  - rewrite refinesE => // * => ? ?.
+    apply: seqmx_row_submx_R; repeat exact: nat_Rxx.
+    exact: list_R_nat_Rxx.
+Qed.
+
+Global Instance refine_seqmx_row_submx m n k (J : {set 'I_m}) :
+refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx #|J|) (nat_Rxx n))
+          (fun M => @row_submx R m n M J)
+          (@seqmx_row_submx C m n k (seq_from_set J)).
+Proof.
+  apply: RseqmxC_seqmx_row_submx; exact: list_R_nat_Rxx.
 Qed.
 
 Global Instance RseqmxC_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22

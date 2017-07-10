@@ -9,12 +9,6 @@ Import Refinements.Op.
 
 Section Classes.
 
-Definition seq_from_set {m} (I : {set 'I_m}) := [seq val i | i <- enum I].
-
-Class heq_of fset :=
-  heq_op : forall n : nat, fset n -> fset n -> bool.
-Local Notation "x == y" := (heq_op x y) : hetero_computable_scope.
-
 (* cardinality, union, intersection, complement, asymmetric difference *)
 Class card_of fset :=
   card_op : forall n : nat, fset n -> nat.
@@ -45,20 +39,17 @@ Typeclasses Transparent empty_of singl_of subset_of.
 
 Section ordseq_op.
 
-(* Number Type *)
-Variable N : Type.
+Context `{eq_of nat}.
 
-(* Set type *)
-Variable F : nat -> Type.
+Definition ordseq := seq nat.
+Definition hset := fun (_ : nat) => ordseq.
 
-Context `{zero_of N, one_of N, add_of N, eq_of N, leq_of N, lt_of N, spec_of N nat}.
-Context `{implem_of nat N}.
-Context `{forall m, implem_of 'I_m N}.
 
-Definition ordseq {N} := seq N.
-Definition hset := fun (_ : nat) => @ordseq nat.
+(* Converting a set of ordinals to a sequence of nats *)
+Definition seq_from_set {m} (I : {set 'I_m}) : ordseq :=
+  [seq val i | i <- enum I].
 
-(* Inlining of && should provide lazyness here. *)
+(* Copied from CoqEAL *)
 Fixpoint eq_seq {T} f (s1 s2 : seq T) :=
   match s1, s2 with
   | [::], [::] => true
@@ -67,13 +58,11 @@ Fixpoint eq_seq {T} f (s1 s2 : seq T) :=
   end.
 
 Global Instance ordseq0 : empty_of hset := fun _ => [::].
-Global Instance ordseq_eq : eq_of (@ordseq N) := eq_seq eq_op.
+Global Instance ordseq_eq {m} : eq_of (@hset m) := eq_seq eq_op.
 
-Global Instance ordseq_card : card_of hset :=
-  fun _ M => seq.size M.
+Global Instance ordseq_card : card_of hset := fun _ s => size s.
 
-Global Instance ordseq_singleton : singl_of hset :=
-  fun _ e => [:: e].
+Global Instance ordseq_singleton : singl_of hset := fun _ e => [:: e].
 
 Global Instance ordseq_adiff : adiff_of hset :=
   fix aux _ p q := match q with
@@ -128,6 +117,7 @@ Lemma rem_is_sub {m} (I : hset m) :
   forall i, i \in I -> i \notin rem i I.
 Proof.
   move => i. elim: I => [// | hi I Hind].
+  (* TODO *)
 Admitted.
 
 Lemma ordseq_adiff_is_adiff {m} (I J : hset m) (i : nat) :
@@ -135,8 +125,7 @@ Lemma ordseq_adiff_is_adiff {m} (I J : hset m) (i : nat) :
 Proof.
   elim: J I => [// | j J Hind] [// | hi I] //.
   - by rewrite ordseq_nil_adiff //=.
-  - admit.
-  (* This is too much *)
+  - (* TODO *)
 Admitted.
 
 Lemma ordseq_union_sorted {m} (I J : hset m) :
@@ -175,27 +164,39 @@ Proof.
       move => [Hj' _]; by rewrite Hj' orbT.
 Qed.
 
-(** Returning if an element is a member of a set *)
-Fixpoint ordseq_mem {m} x (p : hset m) : bool := match p with
-  | [::] => false
-  | h :: t => (h == x) || @ordseq_mem m x t
-  end.
+Section ordseq_refinements.
 
 Context `{forall m, spec_of nat 'I_m}.
 Context `{eq_of nat}.
 
+Section spec_and_implem.
+
 Global Instance implem_ordseq m : implem_of {set 'I_m} (hset m) :=
   fun s => seq_from_set s.
 
-Global Instance spec_ordseq m : spec_of (@hset m) {set 'I_m} :=
+Global Instance implem_ordseq_irr m1 m2 (rm : nat_R m1 m2) :
+  implem_of {set 'I_m1} (hset m2).
+Proof.
+  rewrite -(nat_R_eq rm); exact: implem_ordseq.
+Qed.
+
+Global Instance spec_ordseq m : spec_of (hset m) {set 'I_m} :=
   fun s => let sMapped := map spec s in [set i | i \in sMapped].
+
+Global Instance spec_ordseq_irr m1 m2 (rm : nat_R m1 m2) :
+  spec_of (hset m2) {set 'I_m1}.
+Proof.
+  rewrite -(nat_R_eq rm); exact: spec_ordseq.
+Qed.
+
+End spec_and_implem.
 
 Local Open Scope rel_scope.
 
 (* In the spirit of Rseqmx...
    TODO: Need to add elemwise equality! *)
 CoInductive Rordseq {m1 m2} (rm : nat_R m1 m2) :
-  {set 'I_m1} -> @hset m2 -> Type :=
+  {set 'I_m1} -> hset m2 -> Type :=
   Rordseq_spec (I : {set 'I_m1}) (J : hset m2) of
     (forall j, j \in J -> (j < m1)%N) &
     (uniq J) & (sorted leq J) & 
@@ -217,8 +218,7 @@ Lemma in_ordseq_eq {m1 m2} (rm : nat_R m1 m2) I J :
   Rordseq rm I J -> eq_seq eq_op J (seq_from_set I).
 Proof. by case. Qed.
 
-Global Instance Rordseq_sub {m1 m2} (rm : nat_R m1 m2)
-(I : {set 'I_m1}) (J : @hset m2) :
+Global Instance Rordseq_sub {m1 m2} (rm : nat_R m1 m2) :
   refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
   (@setD (ordinal_finType m1)) (@ordseq_adiff m2).
 Proof.
@@ -233,11 +233,10 @@ Proof.
   - apply: ordseq_adiff_sorted; [
       exact: (in_ordseq_sorted rm I' J') |
       exact: (in_ordseq_sorted rm Ialt Jalt) ].
-  - admit.
+  - admit. (* TODO *)
 Admitted.
 
-Global Instance Rordseq_add m1 m2 (rm : nat_R m1 m2)
-(I : {set 'I_m1}) (J : (@hset m2)) :
+Global Instance Rordseq_add m1 m2 (rm : nat_R m1 m2) :
   refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
   (@setU (ordinal_finType m1)) (@ordseq_union m2).
 Proof.
@@ -256,89 +255,67 @@ Proof.
       exact: in_ordseq_uniq Ho' | exact: in_ordseq_uniq Ho ].
   - apply: ordseq_union_sorted; apply: in_ordseq_sorted;
     [ exact: Ho | exact: Ho' ].
-  - admit.
+  - admit. (* TODO *)
 Admitted.
 
-Global Instance spec_r m1 m2 (rm : nat_R m1 m2) :
-  spec_of (hset m2) {set 'I_m1}.
+Global Instance refine_ordseq_spec {m} :
+  refines (Rordseq (nat_Rxx m) ==> eq) spec_id spec.
 Proof.
-  rewrite [m1](nat_R_eq rm); exact: spec_ordseq.
+  rewrite refinesE => // *. move => J Js; case.
+  (* TODO *)
+Admitted.
+
+Global Instance refine_ordseq_implem {m} :
+  refines (eq ==> Rordseq (nat_Rxx m)) id implem.
+Proof.
+  rewrite refinesE => // *. move => J Js HJs.
+  rewrite /implem /implem_ordseq.
+  split.
+  - move => j. rewrite /seq_from_set. admit.
+  - rewrite /seq_from_set //. admit.
+  (* TODO *)
+Admitted.
+
+Definition Rset {n} (E : {set 'I_n}) (s : hset n) :=
+  s = seq_from_set E.
+
+Definition oCard {n} (E : {set 'I_n}) := #|E|.
+
+Lemma Rset_cardE {n} x y: @Rset n x y -> #|x| = size y.
+Proof.
+  by rewrite /Rset => ->; rewrite size_map cardE.
 Qed.
 
-Global Instance implem_r m1 m2 (rm : nat_R m1 m2) :
-  implem_of {set 'I_m1} (hset m2).
+Global Instance Rordseq_card {m} :
+  refines (@Rset m ==> eq) oCard size.
 Proof.
-  rewrite [m1](nat_R_eq rm); exact: implem_ordseq.
-Qed.
-
-
-Global Instance Rordseq_spec_l
-  m1 m2 (rm : nat_R m1 m2) `{spec_of (hset m2) {set 'I_m1}} :
-  refines (Rordseq rm ==> Logic.eq) spec_id spec.
-Proof.
-  rewrite refinesE=> _ _ [hS lS h1 h2 h3 h4].
-  rewrite /spec /spec_id.
-  (* TODO : Need elemwise equality to proceed from here! *)
-Admitted.
-
-Context (rAC : nat -> nat -> Type).
-
-Definition RordseqC {m1 m2} (rm : nat_R m1 m2) :
-  {set 'I_m1} -> hset m2 -> Type :=
-  (Rordseq rm \o (list_R nat_R))%rel.
-
-Global Instance RordseqC_sub {m1 m2} (rm : nat_R m1 m2)
- (I : {set 'I_m1}) (J : @hset m2) :
-  refines (RordseqC rm ==> RordseqC rm ==> RordseqC rm)
-  (@setD (ordinal_finType m1)) (@ordseq_adiff m2).
-Proof.
-  eapply refines_trans; tc.
-  - apply: Rordseq_sub; try by done.
-  - rewrite refinesE => // *.
-Admitted.
-
-Global Instance refine_ordseq_sub m (J : {set 'I_m}) :
-refines (RordseqC (nat_Rxx m) ==> RordseqC (nat_Rxx m) ==> RordseqC (nat_Rxx m))
-  (@setD (ordinal_finType m)) (@ordseq_adiff m).
-Proof.
-  apply: RordseqC_sub; try by done.
-  by apply: implem_ordseq.
-Qed.
-
-Global Instance RordseqC_add {m1 m2} (rm : nat_R m1 m2)
-  (I : {set 'I_m1}) (J : @hset m2) :
-  refines (RordseqC rm ==> RordseqC rm ==> RordseqC rm)
-  (@setU (ordinal_finType m1)) (@ordseq_union m2).
-Proof.
-  eapply refines_trans; tc.
-  - apply: Rordseq_add; try by done.
-  - rewrite refinesE => // *.
-Admitted.
-
-Global Instance refine_ordseq_add m (J : {set 'I_m}) :
-refines (RordseqC (nat_Rxx m) ==> RordseqC (nat_Rxx m) ==> RordseqC (nat_Rxx m))
-  (@setU (ordinal_finType m)) (@ordseq_union m).
-Proof.
-  apply: RordseqC_add; [ exact: J | by apply: implem_ordseq ].
+  rewrite refinesE => ? ?; exact: Rset_cardE.
 Qed.
 
 Close Scope rel_scope.
 
+End ordseq_refinements.
+
+End ordseq_op.
+
 Let set_from_seq {m} := fun (s : seq 'I_m) => [set i | i \in s].
 
-Let s1 := set_from_seq [::
+From CoqEAL Require Import natord.
+
+Definition s1 := set_from_seq [::
   Ordinal (erefl (0 < 7));
   Ordinal (erefl (1 < 7));
   Ordinal (erefl (3 < 7));
   Ordinal (erefl (4 < 7))].
 
-Let s2 := set_from_seq [::
+Definition s2 := set_from_seq [::
   Ordinal (erefl (0 < 7));
   Ordinal (erefl (1 < 7));
   Ordinal (erefl (3 < 7));
   Ordinal (erefl (5 < 7))].
 
+
 Goal s1 == s2.
 Proof.
-  Fail by coqeal.
+  Fail coqeal.
 Abort.

@@ -10,6 +10,8 @@
 	refinements/karatsuba.v
 	refinements/poly_div.v
 	refinements/binord.v
+	refinements/natord.v
+	refinements/ordseq.v
 	refinements/seqmx.v
 	refinements/hpoly.v
 	refinements/bareiss.v

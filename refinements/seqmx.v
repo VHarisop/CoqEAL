@@ -62,6 +62,8 @@ Class row_of B I :=
   row_op : forall (m n : nat), I m -> B m n -> B 1 n.
 Class col_of B I :=
   col_op : forall (m n : nat), I n -> B m n -> B m 1.
+Class entry_of A B I :=
+  entry_op : forall (m n : nat), I m -> I n -> B m n -> A.
 Class row_submx_of B S :=
   row_submx_op : forall (m n k : nat), S m k -> B m n -> B k n.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
@@ -73,7 +75,7 @@ End classes.
 Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of.
 Typeclasses Transparent lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of.
 Typeclasses Transparent drsubmx_of row_mx_of col_mx_of block_mx_of.
-Typeclasses Transparent row_of col_of const_mx_of row_submx_of map_mx_of.
+Typeclasses Transparent row_of col_of entry_of const_mx_of row_submx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -248,6 +250,9 @@ Global Instance seqmx_col : col_of hseqmx hord :=
   fun m n j (M : @seqmx A) =>
     map (fun mRow => take 1 (drop j mRow)) M.
 
+Global Instance seqmx_entry : entry_of A hseqmx hord :=
+  fun m n i j (M: @seqmx A) => nth 0%C (nth [::] M i) j.
+
 Global Instance seqmx_row_submx : row_submx_of hseqmx hset :=
   fun m n _ J (M : @seqmx A) =>
     foldr (fun j res => (nth [::] M j) :: res) [::] J.
@@ -319,6 +324,7 @@ Parametricity col_seqmx.
 Parametricity block_seqmx.
 Parametricity seqmx_row.
 Parametricity seqmx_col.
+Parametricity seqmx_entry.
 Parametricity seqmx_row_submx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
@@ -627,6 +633,14 @@ Proof.
     + rewrite !mxE nth_take // -(nat_R_eq rk).
       by rewrite zmodp.ord1 nth_drop addn0; exact: h3.
 Qed.
+
+Instance Rseqmx_seqmx_entry
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
+  (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
+  refines (Rseqmx rm rn ==> eq)
+          (fun M => M i1 j1) (@seqmx_entry R _ m2 n2 i2 j2).
+Admitted.
 
 Definition seq_from_set {m} (I : {set 'I_m}) :=
   [seq val i | i <- enum I].
@@ -1039,6 +1053,19 @@ Global Instance refine_seqmx_col m n k :
 Proof.
   apply: RseqmxC_seqmx_col; exact: nat_Rxx.
 Qed.
+
+Global Instance RseqmxC_seqmx_entry
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
+  (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2):
+  refines (RseqmxC rm rn ==> rAC)
+          (fun M => M i1 j1) (@seqmx_entry C _ m2 n2 i2 j2). 
+Admitted.
+
+Global Instance refine_seqmx_entry m n i j :
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> rAC)
+          (fun M => M i j) (@seqmx_entry C _ m n i j).
+Admitted.
 
 Global Instance RseqmxC_seqmx_row_submx
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
@@ -1631,6 +1658,14 @@ Abort.
 
 Definition Maddm : 'M[int]_(2) := \matrix_(i, j < 2) (i + j * i)%:Z.
 
+
+(*Eval vm_compute in (Maddm (Ordinal (erefl (0 < 2)%N)) (Ordinal (erefl (0 < 2)%N))).*)
+
+Goal (Maddm (Ordinal (erefl (0 < 2)%N)) (Ordinal (erefl (0 < 2)%N)) == 0).
+coqeal.
+
+  apply: refines_goal.
+  *)
 Goal (Maddm == Maddm).
 by coqeal.
 Abort.

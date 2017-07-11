@@ -70,12 +70,24 @@ Local Instance refines_nat_R_S n1 n2 :
 Proof. rewrite refinesE; exact: nat_R_S_R. Qed.
 
 Local Instance refines_implem_eq A B (R : A -> B -> Type)
-      `{implem_of A B, !refines (eq ==> R) implem_id implem} x y :
+  `{implem_of A B, !refines (eq ==> R) implem_id implem} x y :
   refines eq x y -> refines R x (implem y).
 Proof.
   move=> eqxy.
   rewrite -[x]/(implem_id _).
   exact: refines_apply.
+Qed.
+
+Local Arguments add_op /.
+Local Arguments add_ord /.
+
+Global Instance Rord_add n1 n2 (rn : nat_R n1 n2) :
+  refines (Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn) ==> Rord (nat_R_S_R rn))
+          +%R +%C.
+Proof.
+  rewrite refinesE=> x x' hx y y' hy /=.
+  have [<- <-] : (nat_of_ord x = x') /\ (nat_of_ord y = y') by move: hx hy.
+  by rewrite /Rord -(nat_R_eq rn) //.
 Qed.
 
 Local Arguments eq_op /.
@@ -153,6 +165,11 @@ Proof.
 Abort.
 
 Goal p < q.
+Proof.
+  by coqeal.
+Abort.
+
+Goal p + q == (Ordinal (erefl (2 < 5))).
 Proof.
   by coqeal.
 Abort.

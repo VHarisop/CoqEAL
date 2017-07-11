@@ -43,34 +43,17 @@ Section ordseq_op.
 
 Definition hset := fun (m : nat) => seq 'I_m.
 
-(* Extensional definition of bijection between finsets/hsets *)
-Definition Rfin {m} (J : hset m) (E : {set 'I_m}) := E = [set x | x \in J].
-
-Global Instance ord_eq {m} : eq_of ('I_m) := fun x y => x == y.
-
-Global Instance eq_finset {m} : eq_of {set 'I_m} := fun x y => x == y.
-
-Global Instance eq_repr {n}:
-  refines (@Rfin n ==> Rfin ==> param.bool_R) eqtype.eq_op eqtype.eq_op.
-Proof.
-  rewrite refinesE => hs Is Hfin hs' Is' Hfin'.
-  rewrite /Rfin in Hfin Hfin'.
-  case/boolP: (hs == hs') => Heq.
-  - move: Hfin Hfin'; move/eqP: Heq => -> -> -> //=.
-    have -> : [set x in hs'] == [set x in hs'] by [].
-    exact: bool_Rxx.
-  - case/boolP: (Is == Is') => //; move/eqP => P.
-    suff Hp: hs == hs' by move/eqP: Hp; move/eqP: Heq; try by done.
-Admitted.
-
-Definition oleq {m1 m2} (x : 'I_m1) (y : 'I_m2) :=
-  (nat_of_ord x <= nat_of_ord y)%N.
-
 (** Converting a set of ordinals to a sequence of nats and vice-versa *)
 Definition seq_from_set {m} (I : {set 'I_m}) : hset m :=
   [seq i | i <- enum I].
 
 Definition set_from_seq {m} (I : seq 'I_m) : {set 'I_m} := [set i in I].
+
+Definition Rfin {m} : {set 'I_m} -> (hset m) -> Type := fun_hrel (@set_from_seq m).
+Definition Rordseq {m} : (hset m) -> {set 'I_m} -> Type := fun_hrel (@seq_from_set m).
+
+Definition oleq {m1 m2} (x : 'I_m1) (y : 'I_m2) :=
+  (nat_of_ord x <= nat_of_ord y)%N.
 
 Global Instance ordseq0 : empty_of hset := fun _ => [::].
 
@@ -82,7 +65,9 @@ Fixpoint eq_seq {T : Type} f (s1 s2 : seq T) :=
   | _, _ => false
   end.
 
-Global Instance ordseq_eq {m} : eq_of (hset m) := fun x y => x == y.
+Global Instance ord_eq {m} : eq_of 'I_m := fun x y => x == y.
+
+Global Instance ordseq_eq {m} : eq_of (hset m) := eq_seq eq_op.
 
 Global Instance ordseq_card : card_of hset := fun _ s => size s.
 
@@ -219,33 +204,33 @@ Definition eq_ordseq {m1 m2} (s1 : seq 'I_m1) (s2 : seq 'I_m2) :=
 
 (* In the spirit of Rseqmx...
    TODO: Need to add elemwise equality! *)
-CoInductive Rordseq {m1 m2} (rm : nat_R m1 m2) :
+CoInductive Rordseq_p {m1 m2} (rm : nat_R m1 m2) :
   {set 'I_m1} -> hset m2 -> Type :=
-  Rordseq_spec (I : {set 'I_m1}) (J : hset m2) of
+  Rordseq_p_spec (I : {set 'I_m1}) (J : hset m2) of
     (forall j, j \in J -> (j < m1)%N) &
     (uniq J) & (sorted oleq J) & 
-    (eq_ordseq J (seq_from_set I)) : Rordseq rm I J.
+    (eq_ordseq J (seq_from_set I)) : Rordseq_p rm I J.
 
 Section Rordseq_theory.
 
 Lemma in_ordseq_lt {m1 m2} (rm : nat_R m1 m2) I J j :
-  Rordseq rm I J -> j \in J -> (j < m1)%N.
+  Rordseq_p rm I J -> j \in J -> (j < m1)%N.
 Proof. case. move => ? ? Hind _ _ ?. by apply: Hind. Qed.
 
 Lemma in_ordseq_uniq {m1 m2} (rm : nat_R m1 m2) I J :
-  Rordseq rm I J -> uniq J.
+  Rordseq_p rm I J -> uniq J.
 Proof. by case. Qed.
 
 Lemma in_ordseq_sorted {m1 m2} (rm : nat_R m1 m2) I J :
-  Rordseq rm I J -> sorted oleq J.
+  Rordseq_p rm I J -> sorted oleq J.
 Proof. by case. Qed.
 
 Lemma in_ordseq_eq {m1 m2} (rm : nat_R m1 m2) I J :
-  Rordseq rm I J -> eq_ordseq J (seq_from_set I).
+  Rordseq_p rm I J -> eq_ordseq J (seq_from_set I).
 Proof. by case. Qed.
 
-Global Instance Rordseq_sub {m1 m2} (rm : nat_R m1 m2) :
-  refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
+Global Instance Rordseq_p_sub {m1 m2} (rm : nat_R m1 m2) :
+  refines (Rordseq_p rm ==> Rordseq_p rm ==> Rordseq_p rm)
   (@setD (ordinal_finType m1)) (@ordseq_adiff m2).
 Proof.
   rewrite refinesE => I' J' Ho Ialt Jalt Ho' //=; constructor.
@@ -262,8 +247,8 @@ Proof.
   - admit. (* TODO *)
 Admitted.
 
-Global Instance Rordseq_add m1 m2 (rm : nat_R m1 m2) :
-  refines (Rordseq rm ==> Rordseq rm ==> Rordseq rm)
+Global Instance Rordseq_p_add m1 m2 (rm : nat_R m1 m2) :
+  refines (Rordseq_p rm ==> Rordseq_p rm ==> Rordseq_p rm)
   (@setU (ordinal_finType m1)) (@ordseq_union m2).
 Proof.
   rewrite refinesE => I' J' Ho Ialt Jalt Ho'; constructor.
@@ -285,7 +270,7 @@ Proof.
 Admitted.
 
 Global Instance refine_ordseq_spec {m} :
-  refines (Rordseq (nat_Rxx m) ==> eq) spec_id spec.
+  refines (Rordseq_p (nat_Rxx m) ==> eq) spec_id spec.
 Proof.
   rewrite refinesE => // *. move => J Js; case.
   move => I J0 Hltn Huniq Hsorted Heq.
@@ -295,7 +280,7 @@ Proof.
 Admitted.
 
 Global Instance refine_ordseq_implem {m} :
-  refines (eq ==> Rordseq (nat_Rxx m)) implem_id implem.
+  refines (eq ==> Rordseq_p (nat_Rxx m)) implem_id implem.
 Proof.
   rewrite refinesE => // *. move => J Js HJs.
   rewrite /implem /implem_ordseq.
@@ -316,7 +301,7 @@ Proof.
   by rewrite /Rset => ->; rewrite size_map cardE.
 Qed.
 
-Global Instance Rordseq_card {m} :
+Global Instance Rordseq_p_card {m} :
   refines (@Rset m ==> eq) oCard (@ordseq_card m).
 Proof.
   rewrite refinesE => ? ? Hp. exact: Rset_cardE.
@@ -330,6 +315,8 @@ End ordseq_refinements.
 
 End ordseq_op.
 
+From CoqEAL Require Import binord.
+
 Definition s1 := set_from_seq [::
   Ordinal (erefl (0 < 7)%N);
   Ordinal (erefl (1 < 7)%N);
@@ -342,18 +329,13 @@ Definition s2 := set_from_seq [::
   Ordinal (erefl (3 < 7)%N);
   Ordinal (erefl (5 < 7)%N)].
 
-Definition ss1 := [::
-  Ordinal (erefl (0 < 7)%N);
-  Ordinal (erefl (1 < 7)%N);
-  Ordinal (erefl (3 < 7)%N);
-  Ordinal (erefl (5 < 7)%N)] : hset 7.
+Definition ss1 := seq_from_set s1 : hset 7.
+Definition ss2 := seq_from_set s2 : hset 7.
 
-Definition ss2 := [::
-  Ordinal (erefl (0 < 7)%N);
-  Ordinal (erefl (1 < 7)%N);
-  Ordinal (erefl (3 < 7)%N);
-  Ordinal (erefl (4 < 7)%N)] : hset 7.
-
+Goal ~~ (ordseq_eq ss1 ss2).
+Proof.
+  Fail by coqeal.
+Abort.
 
 Goal (oCard s1) = (oCard s2).
 Proof.
@@ -362,5 +344,6 @@ Abort.
 
 Goal s1 == s2.
 Proof.
+  eapply refines_eq; eapply refines_goal; tc.
   Fail by coqeal.
 Abort.

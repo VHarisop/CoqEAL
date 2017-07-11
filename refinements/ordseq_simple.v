@@ -197,6 +197,20 @@ Proof.
   rewrite -(nat_R_eq rm); exact: spec_ordseq.
 Qed.
 
+Global Instance eq_repr {n} :
+  refines (@Rfin n ==> Rfin ==> bool_R) eqtype.eq_op eq_op.
+Proof.
+  rewrite refinesE => //=.
+  move => h hs Hrf h' hs' Hrf'.
+Admitted.
+
+Global Instance eq_finset {n} :
+  refines (@Rordseq n ==> Rordseq ==> bool_R) eq_op eqtype.eq_op.
+Proof.
+  rewrite refinesE => //=.
+  move => hs h Hrf hs' h' Hrf'.
+Admitted.
+
 End spec_and_implem.
 
 Definition eq_ordseq {m1 m2} (s1 : seq 'I_m1) (s2 : seq 'I_m2) :=
@@ -315,8 +329,6 @@ End ordseq_refinements.
 
 End ordseq_op.
 
-From CoqEAL Require Import binord.
-
 Definition s1 := set_from_seq [::
   Ordinal (erefl (0 < 7)%N);
   Ordinal (erefl (1 < 7)%N);
@@ -342,8 +354,8 @@ Proof.
   Fail by coqeal.
 Abort.
 
-Goal s1 == s2.
+Goal eqtype.eq_op s1 s2.
 Proof.
-  eapply refines_eq; eapply refines_goal; tc.
+  eapply refines_goal; tc.
   Fail by coqeal.
 Abort.

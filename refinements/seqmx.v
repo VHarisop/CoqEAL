@@ -392,6 +392,15 @@ Proof.
   by rewrite refinesE.
 Qed.
 
+
+Instance Rseqmx_seqmx_entry
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
+  (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
+  refines (Rseqmx rm rn ==> eq)
+          (fun (M : 'M[R]_(m1, n1)) => M i1 j1) (@seqmx_entry R _ m2 n2 i2 j2).
+Admitted.
+
 Instance Rseqmx_mkseqmx_ord m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
   refines (eq ==> Rseqmx rm rn) (matrix_of_fun matrix_key)
           (@mkseqmx_ord R m1 n1).
@@ -633,14 +642,6 @@ Proof.
     + rewrite !mxE nth_take // -(nat_R_eq rk).
       by rewrite zmodp.ord1 nth_drop addn0; exact: h3.
 Qed.
-
-Instance Rseqmx_seqmx_entry
-  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
-  (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
-  refines (Rseqmx rm rn ==> eq)
-          (fun M => M i1 j1) (@seqmx_entry R _ m2 n2 i2 j2).
-Admitted.
 
 Definition seq_from_set {m} (I : {set 'I_m}) :=
   [seq val i | i <- enum I].
@@ -1059,7 +1060,7 @@ Global Instance RseqmxC_seqmx_entry
   (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
   (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2):
   refines (RseqmxC rm rn ==> rAC)
-          (fun M => M i1 j1) (@seqmx_entry C _ m2 n2 i2 j2). 
+          (fun M => M i1 j1) (@seqmx_entry C _ m2 n2 i2 j2).
 Admitted.
 
 Global Instance refine_seqmx_entry m n i j :
@@ -1662,12 +1663,13 @@ Definition Maddm : 'M[int]_(2) := \matrix_(i, j < 2) (i + j * i)%:Z.
 (*Eval vm_compute in (Maddm (Ordinal (erefl (0 < 2)%N)) (Ordinal (erefl (0 < 2)%N))).*)
 
 Goal (Maddm (Ordinal (erefl (0 < 2)%N)) (Ordinal (erefl (0 < 2)%N)) == 0).
-coqeal.
+Proof.
+  Fail by coqeal.
+Abort.
 
-  apply: refines_goal.
-  *)
 Goal (Maddm == Maddm).
-by coqeal.
+Proof.
+  by coqeal.
 Abort.
 
 Definition M3 : 'M[int]_(2,2) := \matrix_(i,j < 2) 3%:Z.

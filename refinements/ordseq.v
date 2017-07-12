@@ -199,7 +199,7 @@ CoInductive Rordseq {m1 m2} (rm : nat_R m1 m2) :
   {set 'I_m1} -> hset m2 -> Type :=
   Rordseq_spec (I : {set 'I_m1}) (J : hset m2) of
     (forall j, j \in J -> (j < m1)%N) &
-    (uniq J) & (sorted leq J) & 
+    (uniq J) & (sorted leq J) &
     (eq_seq eq_op J (seq_from_set I)) : Rordseq rm I J.
 
 Lemma in_ordseq_lt {m1 m2} (rm : nat_R m1 m2) I J (j : nat) :
@@ -229,7 +229,7 @@ Proof.
     move => [Hj' _]. exact: (in_ordseq_lt rm I' J').
   - apply: ordseq_adiff_uniq; [
       exact: in_ordseq_uniq Ho |
-      exact: in_ordseq_uniq Ho' ]. 
+      exact: in_ordseq_uniq Ho' ].
   - apply: ordseq_adiff_sorted; [
       exact: (in_ordseq_sorted rm I' J') |
       exact: (in_ordseq_sorted rm Ialt Jalt) ].
@@ -302,6 +302,8 @@ Let set_from_seq {m} := fun (s : seq 'I_m) => [set i | i \in s].
 
 From CoqEAL Require Import natord.
 
+Local Open Scope nat_scope.
+
 Definition s1 := set_from_seq [::
   Ordinal (erefl (0 < 7));
   Ordinal (erefl (1 < 7));
@@ -319,3 +321,5 @@ Goal s1 == s2.
 Proof.
   Fail coqeal.
 Abort.
+
+Close Scope nat_scope.

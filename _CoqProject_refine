@@ -13,6 +13,8 @@
 	refinements/natord.v
 	refinements/ordseq.v
 	refinements/seqmx.v
+	refinements/seqmx_complements.v
+	refinements/seqmx_extra.v
 	refinements/hpoly.v
 	refinements/bareiss.v
 	refinements/rational.v

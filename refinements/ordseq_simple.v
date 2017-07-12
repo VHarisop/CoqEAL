@@ -12,7 +12,7 @@ Local Open Scope rel_scope.
 Section Classes.
 
 (* cardinality, union, intersection, complement, asymmetric difference *)
-(*Class card_of fset :=
+Class card_of fset :=
   card_op : forall n : nat, fset n -> nat.
 Class union_of fset :=
   union_op : forall n : nat, fset n -> fset n -> fset n.
@@ -28,14 +28,12 @@ Class empty_of fset :=
 Class singl_of fset :=
   singl_op : forall n : nat, 'I_n -> fset n.
 Class subset_of fset :=
-  subset_op : forall n : nat, fset n -> fset n -> bool.*)
+  subset_op : forall n : nat, fset n -> fset n -> bool.
 
 End Classes.
 
-(*
 Typeclasses Transparent card_of union_of inter_of compl_of adiff_of.
 Typeclasses Transparent empty_of singl_of subset_of.
-*)
 
 (** ordseq.v: An implementation of sets of ordinals as sorted sequences
     of ordinals containing unique elements *)
@@ -50,6 +48,7 @@ Definition seq_from_set {m} (I : {set 'I_m}) : hset m :=
 
 Definition set_from_seq {m} (I : seq 'I_m) : {set 'I_m} := [set i in I].
 
+(** From finsets to seqs and vice-versa *)
 Definition Rfin {m} : {set 'I_m} -> (hset m) -> Type := fun_hrel (@set_from_seq m).
 Definition Rordseq {m} : (hset m) -> {set 'I_m} -> Type := fun_hrel (@seq_from_set m).
 
@@ -82,6 +81,8 @@ Global Instance ordseq_adiff : adiff_of hset :=
 
 Global Instance ordseq_union : union_of hset :=
   fun _ a b => merge oleq a (ordseq_adiff _ b a).
+
+Definition ordseq_of_fun m (f : 'I_m -> 'I_m) : seq 'I_m -> hset m := map f.
 
 Section ordseq_theory.
 
@@ -228,6 +229,12 @@ CoInductive Rordseq_p {m1 m2} (rm : nat_R m1 m2) :
 
 Section Rordseq_theory.
 
+Global Instance Rordseq_p_ordseq_of m : forall I,
+  refines (Rordseq_p (nat_Rxx m))
+          (@set_from_seq m I) (@ordseq_of_fun m id I).
+Proof.
+Admitted.
+
 Lemma in_ordseq_lt {m1 m2} (rm : nat_R m1 m2) I J j :
   Rordseq_p rm I J -> j \in J -> (j < m1)%N.
 Proof. case. move => ? ? Hind _ _ ?. by apply: Hind. Qed.
@@ -341,6 +348,8 @@ Definition s2 := set_from_seq [::
   Ordinal (erefl (1 < 7)%N);
   Ordinal (erefl (3 < 7)%N);
   Ordinal (erefl (5 < 7)%N)].
+
+Eval vm_compute in s1.
 
 Definition ss1 := seq_from_set s1 : hset 7.
 Definition ss2 := seq_from_set s2 : hset 7.

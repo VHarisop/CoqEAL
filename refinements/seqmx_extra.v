@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect ssralg ssrnum.
 From mathcomp Require Import finset fintype poly matrix.
 
-From Polyhedra Require Import vector_order.
+From Polyhedra Require Import vector_order inner_product.
 From CoqEAL Require Import hrel param refinements trivial_seq seqmx.
 
 Set Implicit Arguments.
@@ -20,13 +20,20 @@ Local Notation "<=m%HC" := hlev_op.
 Local Notation "x <=m%HC y" := (hlev_op x y) (at level 0) : hetero_computable_scope.
 Local Notation "x >=m%HC y" := (hlev_op y x) (only parsing, at level 0) : hetero_computable_scope.
 
+Class hvdot_of A I B := hvdot_op : forall n : I, B n 1%N -> B n 1%N -> A.
+Local Notation "''[' u , v ]%HC" := (hvdot_op u v) : hetero_computable_scope.
+Local Notation "''[' u ]%HC" := (hvdot_op u u ) : hetero_computable_scope.
+
 End classes.
 
-Typeclasses Transparent hlev_of.
+Typeclasses Transparent hlev_of hvdot_of.
 
 Notation "<=m%HC":= hlev_op.
 Notation "x <=m y" := (hlev_op x y) (at level 0) : hetero_computable_scope.
 Notation "x >=m y" := (hlev_op y x) (only parsing, at level 0) : hetero_computable_scope.
+
+Notation "''[' u , v ]%HC" := (hvdot_op u v) : hetero_computable_scope.
+Notation "''[' u ]%HC" := (hvdot_op u u ) : hetero_computable_scope.
 
 Section seqmx_extra_op.
 
@@ -38,14 +45,21 @@ Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A, leq_of A}.
 Context `{forall n, implem_of 'I_n (I n)}.
 
 Global Instance lev_seqmx : @hlev_of nat (@hseqmx A) :=
-  fun n v u =>
+  fun _ v u =>
     let v' := map (head 0%C) v in
     let u' := map (head 0%C) u in
     foldl andb true (zipwith leq_op v' u').
 
+Global Instance vdot_seqmx : @hvdot_of A nat (@hseqmx A) :=
+  fun _ v u =>
+    let v' := map (head 0%C) v in
+    let u' := map (head 0%C) u in
+    foldl add_op 0%C (zipwith mul_op v' u').
+
 End seqmx_extra_op.
 
 Parametricity lev_seqmx.
+Parametricity vdot_seqmx.
 
 Section seqmx_extra_refinements.
 
@@ -72,6 +86,13 @@ Proof.
   case/boolP: (u) <=m (v) => Hlev.
 Admitted.
 
+Global Instance Rseqmx_vdot m1 m2 (rm : nat_R m1 m2) :
+  refines (Rseqmx rm (nat_Rxx 1) ==> Rseqmx rm (nat_Rxx 1) ==> eq)
+          (@vdot m1 rF) (@hvdot_op _ _ _ _ _).
+Proof.
+  rewrite refinesE => u hu Hu v hv Hv.
+Admitted.
+
 Context (C : Type) (rFAC : rF -> C -> Type).
 Context (I : nat -> Type)
         (F : nat -> nat -> Type)
@@ -84,6 +105,9 @@ Context `{!refines (rFAC ==> rFAC) -%R -%C}.
 Context `{!refines (rFAC ==> rFAC ==> rFAC) +%R +%C}.
 Context `{!refines (rFAC ==> rFAC ==> rFAC) *%R *%C}.
 Context `{!refines (rFAC ==> rFAC ==> bool_R) eqtype.eq_op eq_op}.
+Context `{!refines (eq ==> eq ==> eq) addF addF}.
+Context `{!refines (eq ==> eq ==> eq) mulF mulF}.
+Context `{!refines eq zeroF zeroF}.
 
 (** IMPORTANT: removing this from the context makes the (<=m) goal fail!!! *)
 Context `{!refines (rFAC ==> rFAC ==> bool_R) leqF leq_op}.
@@ -108,6 +132,21 @@ Global Instance refine_lev_seqmx m :
                    ==> bool_R)
           (@lev rF m) (@hlev_op _ _ _ _).
 Proof. exact: RseqmxC_lev. Qed.
+
+Lemma list_R_eqxx {T} : forall x, list_R (@eq T) x x.
+Proof.
+  elim => [//= | hP P Hind].
+  - exact: list_R_nil_R.
+  - apply: list_R_cons_R; [ done | exact : Hind ].
+Qed.
+
+Lemma list_R_list_R_eq {T} : forall x, list_R (list_R (@eq T)) x x.
+Proof.
+  elim => [//= | hp P Pind].
+  - exact: list_R_nil_R.
+  - apply: list_R_cons_R; last by exact: Pind.
+    exact: list_R_eqxx.
+Qed.
 
 Close Scope rel_scope.
 
@@ -134,5 +173,11 @@ Goal (col ord0 fN) <=m (col ord0 fP).
 Proof.
   by coqeal.
 Qed.
+
+Set Typeclasses Debug.
+
+Goal '[(col ord0 fN), (col ord0 fN)] == 2%:Q.
+Proof.
+  by coqeal.
 
 End test.

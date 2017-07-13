@@ -392,14 +392,17 @@ Proof.
   by rewrite refinesE.
 Qed.
 
-
 Instance Rseqmx_seqmx_entry
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
   (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
   refines (Rseqmx rm rn ==> eq)
           (fun (M : 'M[R]_(m1, n1)) => M i1 j1) (@seqmx_entry R _ m2 n2 i2 j2).
-Admitted.
+Proof.
+  rewrite refinesE => ? ?; case => A M _ _ Helem.
+  rewrite /seqmx_entry -(nat_R_eq ri) -(nat_R_eq rj).
+  exact: Helem.
+Qed.
 
 Instance Rseqmx_mkseqmx_ord m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
   refines (eq ==> Rseqmx rm rn) (matrix_of_fun matrix_key)
@@ -1058,15 +1061,23 @@ Qed.
 Global Instance RseqmxC_seqmx_entry
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
-  (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2):
+  (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
   refines (RseqmxC rm rn ==> rAC)
           (fun M => M i1 j1) (@seqmx_entry C _ m2 n2 i2 j2).
+Proof.
+  eapply refines_trans; tc.
+  - apply: Rseqmx_seqmx_entry; [ exact: ri | exact: rj ].
+  - rewrite refinesE; move => hx hy; apply: seqmx_entry_R; first admit;
+    repeat exact: nat_Rxx.
+    (* TODO: need rAC (zero_of R) (zero_of C) here *)
 Admitted.
 
 Global Instance refine_seqmx_entry m n i j :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> rAC)
           (fun M => M i j) (@seqmx_entry C _ m n i j).
-Admitted.
+Proof.
+  apply: RseqmxC_seqmx_entry; exact: nat_Rxx.
+Qed.
 
 Global Instance RseqmxC_seqmx_row_submx
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)

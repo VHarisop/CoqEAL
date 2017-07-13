@@ -100,7 +100,7 @@ Global Instance RseqmxC_lev m1 m2 (rm : nat_R m1 m2) :
   refines (RseqmxC rm (nat_Rxx 1) ==> RseqmxC rm (nat_Rxx 1) ==> bool_R)
           (@lev rF m1) (@hlev_op _ _ _ _).
 Proof.
-  param_comp lev_seqmx_R; rewrite refinesE; last by apply: nat_Rxx.
+  param_comp lev_seqmx_R; rewrite refinesE; exact: nat_Rxx.
 Qed.
 
 Global Instance refine_lev_seqmx m :

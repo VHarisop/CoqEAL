@@ -120,9 +120,6 @@ Definition hseqmx {A} := fun (_ _ : nat) => @seqmx A.
 Definition hord := fun (_ : nat) => nat.
 Definition hset := fun (_ _ : nat) => seq nat.
 
-(** The definition for a row matrix created by an ordinal *)
-Definition hexseqmx {A} := fun (m _ : nat) (_ : 'I_m) => @seqmx A.
-
 Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A}.
 Context `{forall n, implem_of 'I_n (I n)}.
 Context `{forall m k, implem_of {set 'I_m} (F m k)}.
@@ -392,16 +389,15 @@ Proof.
   by rewrite refinesE.
 Qed.
 
-Instance Rseqmx_seqmx_entry
+Global Instance Rseqmx_seqmx_entry
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
   (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
   refines (Rseqmx rm rn ==> eq)
-          (fun (M : 'M[R]_(m1, n1)) => M i1 j1) (@seqmx_entry R _ m2 n2 i2 j2).
+          (fun M => fun_of_matrix M i1 j1) (seqmx_entry i2 j2).
 Proof.
   rewrite refinesE => ? ?; case => A M _ _ Helem.
-  rewrite /seqmx_entry -(nat_R_eq ri) -(nat_R_eq rj).
-  exact: Helem.
+  rewrite /seqmx_entry -(nat_R_eq ri) -(nat_R_eq rj); exact: Helem.
 Qed.
 
 Instance Rseqmx_mkseqmx_ord m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
@@ -789,7 +785,6 @@ Context (F : nat -> nat -> Type).
 Context `{zero_of C, one_of C, opp_of C, add_of C, mul_of C, eq_of C}.
 Context `{spec_of C R}.
 Context `{forall n, implem_of 'I_n (I n)}.
-Context `{forall m k, implem_of {set 'I_m} (F m k)}.
 Context `{!refines rAC 0%C 0%C, !refines rAC 1%C 1%C}.
 Context `{!refines (rAC ==> rAC) -%C -%C}.
 Context `{!refines (rAC ==> rAC ==> rAC) +%C +%C}.
@@ -1020,15 +1015,13 @@ Proof. exact: RseqmxC_col_seqmx. Qed.
 
 Global Instance RseqmxC_seqmx_row
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
-  (k1 : 'I_m1) k2 (rk : nat_R k1 k2)
-  (r1 : nat_R 1 1) :
-  refines (RseqmxC rm rn ==> RseqmxC r1 rn)
+  (k1 : 'I_m1) k2 (rk : nat_R k1 k2) :
+  refines (RseqmxC rm rn ==> RseqmxC (nat_Rxx 1) rn)
           (@matrix.row R m1 n1 k1) (@seqmx_row C m2 n2 k2).
 Proof.
   eapply (refines_trans (b := (seqmx_row k2))); tc.
   - exact: Rseqmx_seqmx_row.
-  - rewrite refinesE => // *.
-    move => ? ?; apply: seqmx_row_R; repeat exact: nat_Rxx.
+  - rewrite refinesE => // ? ?; apply: seqmx_row_R; repeat exact: nat_Rxx.
 Qed.
 
 Global Instance refine_seqmx_row m n k:
@@ -1045,10 +1038,9 @@ Global Instance RseqmxC_seqmx_col
   refines (RseqmxC rm rn ==> RseqmxC rm r1)
           (@matrix.col R m1 n1 k1) (@seqmx_col C m2 n2 k2).
 Proof.
-   eapply refines_trans; tc.
+   eapply (refines_trans (b := (seqmx_col k2))); tc.
   - apply: Rseqmx_seqmx_col; exact: rk.
-  - rewrite refinesE => // *.
-    move => ? ?; apply: seqmx_col_R; repeat exact: nat_Rxx.
+  - rewrite refinesE => // ? ?; apply: seqmx_col_R; repeat exact: nat_Rxx.
 Qed.
 
 Global Instance refine_seqmx_col m n k :
@@ -1063,18 +1055,19 @@ Global Instance RseqmxC_seqmx_entry
   (i1 : 'I_m1) (i2 : nat) (ri : nat_R i1 i2)
   (j1 : 'I_n1) (j2 : nat) (rj : nat_R j1 j2) :
   refines (RseqmxC rm rn ==> rAC)
-          (fun M => M i1 j1) (@seqmx_entry C _ m2 n2 i2 j2).
+          (fun M => fun_of_matrix M i1 j1) (seqmx_entry i2 j2).
 Proof.
-  eapply refines_trans; tc.
+  eapply (refines_trans (b := seqmx_entry i2 j2)); tc.
   - apply: Rseqmx_seqmx_entry; [ exact: ri | exact: rj ].
-  - rewrite refinesE; move => hx hy; apply: seqmx_entry_R; first admit;
-    repeat exact: nat_Rxx.
-    (* TODO: need rAC (zero_of R) (zero_of C) here *)
+  - param_comp seqmx_entry_R; first by rewrite refinesE.
+    + rewrite refinesE //. admit.
+    + rewrite refinesE //. admit.
+    (* TODO: Might need rAC (zero_of R) (zero_of C) here *)
 Admitted.
 
 Global Instance refine_seqmx_entry m n i j :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> rAC)
-          (fun M => M i j) (@seqmx_entry C _ m n i j).
+          (fun M => fun_of_matrix M i j) (@seqmx_entry C _ m n i j).
 Proof.
   apply: RseqmxC_seqmx_entry; exact: nat_Rxx.
 Qed.
@@ -1670,10 +1663,11 @@ Abort.
 
 Definition Maddm : 'M[int]_(2) := \matrix_(i, j < 2) (i + j * i)%:Z.
 
-
 (*Eval vm_compute in (Maddm (Ordinal (erefl (0 < 2)%N)) (Ordinal (erefl (0 < 2)%N))).*)
 
-Goal (Maddm (Ordinal (erefl (0 < 2)%N)) (Ordinal (erefl (0 < 2)%N)) == 0).
+Set Typeclasses Debug.
+
+Goal (Maddm ord0 (Ordinal (erefl (0 < 2)%N)) == 0%:Z).
 Proof.
   Fail by coqeal.
 Abort.

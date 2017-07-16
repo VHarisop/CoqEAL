@@ -38,7 +38,6 @@ Notation "''[' u ]%HC" := (hvdot_op u u ) : hetero_computable_scope.
 Section seqmx_extra_op.
 
 Variable A : Type.
-
 Variable I : nat -> Type.
 
 Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A, leq_of A}.
@@ -65,15 +64,15 @@ Section seqmx_extra_refinements.
 
 Variable rF : realFieldType.
 Global Instance zeroF : zero_of rF := 0%R.
-Local Instance oneF  : one_of rF := 1%R.
-Local Instance oppF  : opp_of rF := -%R.
-Local Instance addF  : add_of rF := +%R.
-Local Instance mulF  : mul_of rF := *%R.
-Local Instance leqF  : leq_of rF := fun x y => (x <= y)%R.
-Local Instance eqF   : eq_of rF   := eqtype.eq_op.
-Local Instance specF_field : spec_of rF rF := spec_id.
+Global Instance oneF  : one_of rF := 1%R.
+Global Instance oppF  : opp_of rF := -%R.
+Global Instance addF  : add_of rF := +%R.
+Global Instance mulF  : mul_of rF := *%R.
+Global Instance eqF   : eq_of rF   := eqtype.eq_op.
+Global Instance leqF  : leq_of rF := fun x y => (x <= y)%R.
+Global Instance specF_field : spec_of rF rF := spec_id.
 
-Local Instance implem_ord_field : forall n, (implem_of 'I_n 'I_n) :=
+Global Instance implem_ord_field : forall n, (implem_of 'I_n 'I_n) :=
   fun _ => implem_id.
 
 Local Open Scope rel_scope.
@@ -91,11 +90,12 @@ Global Instance Rseqmx_vdot m1 m2 (rm : nat_R m1 m2) :
           (@vdot m1 rF) (@hvdot_op _ _ _ _ _).
 Proof.
   rewrite refinesE => u hu Hu v hv Hv.
+  rewrite /vdot /hvdot_op /vdot_seqmx.
+  (* TODO: [seq head 0%C i | i <- hu] refines [seq M i 0 | i <- u] *)
 Admitted.
 
 Context (C : Type) (rFAC : rF -> C -> Type).
 Context (I : nat -> Type)
-        (F : nat -> nat -> Type)
         (rI : forall n1 n2, nat_R n1 n2 -> 'I_n1 -> I n2 -> Type).
 Context `{zero_of C, one_of C, opp_of C, add_of C, mul_of C, eq_of C, leq_of C}.
 Context `{spec_of C rF}.
@@ -112,8 +112,7 @@ Context `{!refines eq zeroF zeroF}.
 (** IMPORTANT: removing this from the context makes the (<=m) goal fail!!! *)
 Context `{!refines (rFAC ==> rFAC ==> bool_R) leqF leq_op}.
 
-
-Context `{!refines (rFAC ==> Logic.eq) spec_id spec}.
+Context `{!refines (rFAC ==> eq) spec_id spec}.
 Context `{forall n1 n2 (rn : nat_R n1 n2),
              refines (ordinal_R rn ==> rI rn) implem_id implem}.
 
@@ -132,6 +131,20 @@ Global Instance refine_lev_seqmx m :
                    ==> bool_R)
           (@lev rF m) (@hlev_op _ _ _ _).
 Proof. exact: RseqmxC_lev. Qed.
+
+Global Instance RseqmxC_vdot m1 m2 (rm : nat_R m1 m2) :
+  refines (RseqmxC rm (nat_Rxx 1) ==> RseqmxC rm (nat_Rxx 1) ==> rFAC)
+          (@vdot m1 rF) (@vdot_seqmx C _ _ _ m2).
+Proof.
+  param_comp vdot_seqmx_R; rewrite refinesE; exact: nat_Rxx.
+Qed.
+
+Global Instance refine_vdot_seqmx m :
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx 1) ==> RseqmxC (nat_Rxx m) (nat_Rxx 1)
+          ==> rFAC) (@vdot m rF) (@vdot_seqmx C _ _ _ _).
+Proof.
+  exact: RseqmxC_vdot.
+Qed.
 
 Lemma list_R_eqxx {T} : forall x, list_R (@eq T) x x.
 Proof.
@@ -164,6 +177,9 @@ Abort.
 Definition fN := \matrix_(i,j < 2) 1%:Q.
 Definition fP := \matrix_(i,j < 2) 4%:Q.
 
+Definition vN := \matrix_(i < 5, j < 1) 2%:Q.
+Definition vP := \matrix_(i < 5, j < 1) 1%:Q.
+
 Goal (col ord0 fN) != (col ord0 fP).
 Proof.
   by coqeal.
@@ -176,8 +192,14 @@ Qed.
 
 Set Typeclasses Debug.
 
-Goal '[(col ord0 fN), (col ord0 fN)] == 2%:Q.
+Goal vdot vN vP == 10%:Q.
 Proof.
   by coqeal.
+Qed.
+
+Goal '[col ord0 fN, col ord0 fP] == 8%:Q.
+Proof.
+  by coqeal.
+Qed.
 
 End test.

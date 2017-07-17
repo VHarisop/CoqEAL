@@ -3,7 +3,7 @@
 
 From mathcomp Require Import all_ssreflect.
 
-From CoqEAL Require Import hrel param refinements.
+From CoqEAL Require Import hrel param refinements trivial_seq.
 
 Import Refinements.Op.
 
@@ -34,6 +34,8 @@ End Classes.
 
 Typeclasses Transparent card_of union_of inter_of compl_of adiff_of.
 Typeclasses Transparent empty_of singl_of subset_of.
+
+Instance implem_ord : forall n, implem_of 'I_n 'I_n := fun _ => implem_id.
 
 (** ordseq.v: An implementation of sets of ordinals as sorted sequences
     of ordinals containing unique elements *)
@@ -72,6 +74,8 @@ Global Instance ordseq_eq {m} : eq_of (hset m) := eq_seq eq_op.
 Global Instance ordseq_card : card_of hset := fun _ s => size s.
 
 Global Instance ordseq_singleton : singl_of hset := fun _ e => [:: e].
+
+Global Instance ordseq_empty : empty_of hset := fun _ => [::].
 
 Global Instance ordseq_adiff : adiff_of hset :=
   fix aux _ p q := match q with
@@ -224,15 +228,23 @@ CoInductive Rordseq_p {m1 m2} (rm : nat_R m1 m2) :
   {set 'I_m1} -> hset m2 -> Type :=
   Rordseq_p_spec (I : {set 'I_m1}) (J : hset m2) of
     (forall j, j \in J -> (j < m1)%N) &
-    (uniq J) & (sorted oleq J) & 
+    (uniq J) & (sorted oleq J) &
     (eq_ordseq J (seq_from_set I)) : Rordseq_p rm I J.
 
 Section Rordseq_theory.
 
-Global Instance Rordseq_p_ordseq_of m : forall I,
-  refines (Rordseq_p (nat_Rxx m))
-          (@set_from_seq m I) (@ordseq_of_fun m id I).
+Global Instance Rordseq_p_ordseq_of m :
+  refines (list_R (ordinal_R (nat_Rxx m)) ==> Rordseq_p (nat_Rxx m))
+          (@set_from_seq m) (@ordseq_of_fun m id).
 Proof.
+  rewrite refinesE => x y Heq; constructor.
+Admitted.
+
+Global Instance Rfin_ordseq_of m :
+  refines (eq ==> Rfin)
+          (@set_from_seq m) (@ordseq_of_fun m id).
+Proof.
+  rewrite refinesE => x y Heq. rewrite /Rfin /fun_hrel.
 Admitted.
 
 Lemma in_ordseq_lt {m1 m2} (rm : nat_R m1 m2) I J j :
@@ -251,6 +263,12 @@ Lemma in_ordseq_eq {m1 m2} (rm : nat_R m1 m2) I J :
   Rordseq_p rm I J -> eq_ordseq J (seq_from_set I).
 Proof. by case. Qed.
 
+Global Instance Rfin_empty m :
+  refines (@Rfin m) set0 (ordseq_empty m).
+Proof.
+  by rewrite refinesE.
+Qed.
+
 Global Instance Rordseq_p_sub {m1 m2} (rm : nat_R m1 m2) :
   refines (Rordseq_p rm ==> Rordseq_p rm ==> Rordseq_p rm)
   (@setD (ordinal_finType m1)) (@ordseq_adiff m2).
@@ -262,7 +280,7 @@ Proof.
     move => [Hj' _]. exact: (in_ordseq_lt rm I' J').
   - apply: ordseq_adiff_uniq; [
       exact: in_ordseq_uniq Ho |
-      exact: in_ordseq_uniq Ho' ]. 
+      exact: in_ordseq_uniq Ho' ].
   - apply: ordseq_adiff_sorted; [
       exact: (in_ordseq_sorted rm I' J') |
       exact: (in_ordseq_sorted rm Ialt Jalt) ].
@@ -292,25 +310,18 @@ Proof.
 Admitted.
 
 Global Instance refine_ordseq_spec {m} :
-  refines (Rordseq_p (nat_Rxx m) ==> eq) spec_id spec.
+  refines (@Rfin m ==> eq) spec_id spec.
 Proof.
-  rewrite refinesE => // *. move => J Js; case.
-  move => I J0 Hltn Huniq Hsorted Heq.
-  rewrite /spec_id /spec /spec_ordseq.
-  have -> : J0 = [seq i | i <- enum I].
-  (* TODO *)
-Admitted.
+  by rewrite refinesE => // *.
+Qed.
 
 Global Instance refine_ordseq_implem {m} :
-  refines (eq ==> Rordseq_p (nat_Rxx m)) implem_id implem.
+  refines (eq ==> @Rfin m) implem_id implem.
 Proof.
-  rewrite refinesE => // *. move => J Js HJs.
-  rewrite /implem /implem_ordseq.
-  split.
-  - move => j _; exact: ltn_ord.
-  - rewrite /seq_from_set map_id; exact: enum_uniq.
-  - rewrite /seq_from_set map_id /sorted. admit.
-  - by rewrite HJs; apply/eqP.
+  rewrite refinesE => // *.
+  rewrite /implem /implem_id /implem_ordseq /seq_from_set.
+  move => _ y ->. rewrite /Rfin /fun_hrel.
+  rewrite /set_from_seq //=.
 Admitted.
 
 Definition Rset {n} (E : {set 'I_n}) (s : hset n) :=
@@ -329,13 +340,18 @@ Proof.
   rewrite refinesE => ? ? Hp. exact: Rset_cardE.
 Qed.
 
-Close Scope rel_scope.
-
 End Rordseq_theory.
 
 End ordseq_refinements.
 
 End ordseq_op.
+
+Close Scope rel_scope.
+
+
+Section test.
+
+From CoqEAL Require Import binord.
 
 Definition s1 := set_from_seq [::
   Ordinal (erefl (0 < 7)%N);
@@ -354,7 +370,17 @@ Eval vm_compute in s1.
 Definition ss1 := seq_from_set s1 : hset 7.
 Definition ss2 := seq_from_set s2 : hset 7.
 
-Goal ~~ (ordseq_eq ss1 ss2).
+Definition q1 := @set0 (ordinal_finType 6).
+Definition q2 := [set i | i in [::]] : {set ordinal_finType 6}.
+
+Set Typeclasses Debug.
+
+Goal ~~ (s1 == s2).
+Proof.
+  Fail by coqeal.
+Abort.
+
+Goal q1 = q2.
 Proof.
   Fail by coqeal.
 Abort.
@@ -366,6 +392,5 @@ Abort.
 
 Goal eqtype.eq_op s1 s2.
 Proof.
-  eapply refines_goal; tc.
   Fail by coqeal.
 Abort.

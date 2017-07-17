@@ -1,6 +1,4 @@
-From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat div seq ssralg.
-(* Require Import path choice fintype tuple finset ssralg bigop poly polydiv. *)
-(* Require Import ssrint ZArith. *)
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat div seq ssralg fintype.
 
 From CoqEAL Require Import hrel param.
 
@@ -19,6 +17,11 @@ Local Open Scope rel.
 Ltac tc := do 1?typeclasses eauto.
 
 Section refinements.
+
+Notation I := (fun (_ : nat) => nat) (only parsing).
+
+Definition Rord n1 n2 (rn : nat_R n1 n2) : 'I_n1 -> I n2 -> Type :=
+  fun x y => x = y :> nat.
 
 Fact refines_key : unit. Proof. done. Qed.
 Class refines A B (R : A -> B -> Type) (m : A) (n : B) :=

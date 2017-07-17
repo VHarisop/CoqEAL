@@ -363,9 +363,6 @@ CoInductive Rseqmx {m1 m2} (rm : nat_R m1 m2) {n1 n2} (rn : nat_R n1 n2) :
   & forall i, i < m2 -> size (nth [::] M i) = n2
   & (forall i j, (A i j = nth 0%C (nth [::] M i) j)) : Rseqmx rm rn A M.
 
-Definition Rord n1 n2 (rn : nat_R n1 n2) : 'I_n1 -> hord n2 -> Type :=
-  fun x y => x = y :> nat.
-
 Instance Rseqmx_seqmx_entry
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2):
   refines (Rseqmx rm rn ==> Rord rm ==> Rord rn ==> eq)

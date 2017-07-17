@@ -46,24 +46,22 @@ Definition hord := fun _ : nat => nat.
 Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A, leq_of A}.
 Context `{forall n, implem_of 'I_n (I n)}.
 
-Lemma foldl_true s : foldl andb true s = all (fun x => x == true) s.
+Lemma foldr_true s : foldr andb true s = all (fun x => x == true) s.
 Proof.
-  elim: s => [// | s S Hind] //=.
-  case: s => //=. suff -> : forall S', foldl andb false S' = false by [].
-  by elim => //.
+  elim: s => [// | s S Hind] //=; by case: s => //=.
 Qed.
 
 Global Instance lev_seqmx : @hlev_of nat (@hseqmx A) :=
   fun _ v u =>
     let v' := map (head 0%C) v in
     let u' := map (head 0%C) u in
-    foldl andb true (zipwith leq_op v' u').
+    foldr andb true (zipwith leq_op v' u').
 
 Global Instance vdot_seqmx : @hvdot_of A nat (@hseqmx A) :=
   fun _ v u =>
     let v' := map (head 0%C) v in
     let u' := map (head 0%C) u in
-    foldl add_op 0%C (zipwith mul_op v' u').
+    foldr add_op 0%C (zipwith mul_op v' u').
 
 End seqmx_extra_op.
 
@@ -87,15 +85,33 @@ Global Instance implem_ord_field : forall n, (implem_of 'I_n 'I_n) :=
 
 Local Open Scope rel_scope.
 
-
-Lemma foldl_cons (s : rF) (S : seq rF) : foldl +%R 0%R (s :: S) = s + foldl +%R 0%R S.
+Lemma list_R_eqxx {T} : forall x, list_R (@eq T) x x.
 Proof.
-Admitted.
+  elim => [//= | hP P Hind].
+  - exact: list_R_nil_R.
+  - apply: list_R_cons_R; [ done | exact : Hind ].
+Qed.
 
-Lemma foldl_bigsum (s : seq rF) : foldl +%R 0%R s = \big[+%R/0%R]_(i <- s) i.
+Lemma list_R_list_R_eq {T} : forall x, list_R (list_R (@eq T)) x x.
+Proof.
+  elim => [//= | hp P Pind].
+  - exact: list_R_nil_R.
+  - apply: list_R_cons_R; last by exact: Pind.
+    exact: list_R_eqxx.
+Qed.
+
+
+Lemma foldr_cons (s : rF) (S : seq rF) :
+  foldr +%R 0%R (s :: S) = s + foldr +%R 0%R S.
+Proof.
+  suff -> : s :: S = [:: s] ++ S by rewrite foldr_cat.
+  done.
+Qed.
+
+Lemma foldr_bigsum (s : seq rF) : foldr +%R 0%R s = \big[+%R/0%R]_(i <- s) i.
 Proof.
   elim: s => [//= | s S Hind]; first by rewrite big_nil.
-  rewrite big_cons -Hind; exact: foldl_cons.
+  rewrite big_cons -Hind; exact: foldr_cons.
 Qed.
 
 Global Instance Rseqmx_leq m1 m2 (rm : nat_R m1 m2) :
@@ -103,7 +119,7 @@ Global Instance Rseqmx_leq m1 m2 (rm : nat_R m1 m2) :
           (@lev rF m1) (@hlev_op _ _ _ _).
 Proof.
   rewrite refinesE => u hu Hu v hv Hv.
-  case/boolP: (u) <=m (v) => Hlev; rewrite /hlev_op /lev_seqmx foldl_true.
+  case/boolP: (u) <=m (v) => Hlev; rewrite /hlev_op /lev_seqmx foldr_true.
   (* TODO : Use nth for element? *)
 Admitted.
 
@@ -117,7 +133,7 @@ Proof.
   - admit.
   have -> : [seq head 0%C i | i <- hv] = [seq v i ord0 | i in 'I_m1].
   - admit.
-  rewrite foldl_bigsum.
+  rewrite foldr_bigsum.
 Admitted.
 
 Context (C : Type) (rFAC : rF -> C -> Type).
@@ -145,7 +161,6 @@ Context `{forall n1 n2 (rn : nat_R n1 n2),
 (* Locally *)
 Notation RseqmxC := (RseqmxC rFAC).
 
-
 Global Instance RseqmxC_lev m1 m2 (rm : nat_R m1 m2) :
   refines (RseqmxC rm (nat_Rxx 1) ==> RseqmxC rm (nat_Rxx 1) ==> bool_R)
           (@lev rF m1) (@hlev_op _ _ _ _).
@@ -163,7 +178,7 @@ Global Instance RseqmxC_vdot m1 m2 (rm : nat_R m1 m2) :
   refines (RseqmxC rm (nat_Rxx 1) ==> RseqmxC rm (nat_Rxx 1) ==> rFAC)
           (@vdot m1 rF) (@vdot_seqmx C _ _ _ m2).
 Proof.
-  param_comp vdot_seqmx_R; rewrite refinesE; exact: nat_Rxx.
+  param_comp vdot_seqmx_R. rewrite refinesE; exact: nat_Rxx.
 Qed.
 
 Global Instance refine_vdot_seqmx m :
@@ -171,21 +186,6 @@ Global Instance refine_vdot_seqmx m :
           ==> rFAC) (@vdot m rF) (@vdot_seqmx C _ _ _ _).
 Proof.
   exact: RseqmxC_vdot.
-Qed.
-
-Lemma list_R_eqxx {T} : forall x, list_R (@eq T) x x.
-Proof.
-  elim => [//= | hP P Hind].
-  - exact: list_R_nil_R.
-  - apply: list_R_cons_R; [ done | exact : Hind ].
-Qed.
-
-Lemma list_R_list_R_eq {T} : forall x, list_R (list_R (@eq T)) x x.
-Proof.
-  elim => [//= | hp P Pind].
-  - exact: list_R_nil_R.
-  - apply: list_R_cons_R; last by exact: Pind.
-    exact: list_R_eqxx.
 Qed.
 
 Close Scope rel_scope.

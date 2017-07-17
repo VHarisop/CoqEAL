@@ -9,6 +9,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Refinements.Op.
+Import GRing.Theory Num.Theory.
 
 Open Scope ring_scope.
 
@@ -40,8 +41,17 @@ Section seqmx_extra_op.
 Variable A : Type.
 Variable I : nat -> Type.
 
+Definition hord := fun _ : nat => nat.
+
 Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A, leq_of A}.
 Context `{forall n, implem_of 'I_n (I n)}.
+
+Lemma foldl_true s : foldl andb true s = all (fun x => x == true) s.
+Proof.
+  elim: s => [// | s S Hind] //=.
+  case: s => //=. suff -> : forall S', foldl andb false S' = false by [].
+  by elim => //.
+Qed.
 
 Global Instance lev_seqmx : @hlev_of nat (@hseqmx A) :=
   fun _ v u =>
@@ -77,12 +87,24 @@ Global Instance implem_ord_field : forall n, (implem_of 'I_n 'I_n) :=
 
 Local Open Scope rel_scope.
 
+
+Lemma foldl_cons (s : rF) (S : seq rF) : foldl +%R 0%R (s :: S) = s + foldl +%R 0%R S.
+Proof.
+Admitted.
+
+Lemma foldl_bigsum (s : seq rF) : foldl +%R 0%R s = \big[+%R/0%R]_(i <- s) i.
+Proof.
+  elim: s => [//= | s S Hind]; first by rewrite big_nil.
+  rewrite big_cons -Hind; exact: foldl_cons.
+Qed.
+
 Global Instance Rseqmx_leq m1 m2 (rm : nat_R m1 m2) :
   refines (Rseqmx rm (nat_Rxx 1) ==> Rseqmx rm (nat_Rxx 1) ==> bool_R)
           (@lev rF m1) (@hlev_op _ _ _ _).
 Proof.
   rewrite refinesE => u hu Hu v hv Hv.
-  case/boolP: (u) <=m (v) => Hlev.
+  case/boolP: (u) <=m (v) => Hlev; rewrite /hlev_op /lev_seqmx foldl_true.
+  (* TODO : Use nth for element? *)
 Admitted.
 
 Global Instance Rseqmx_vdot m1 m2 (rm : nat_R m1 m2) :
@@ -91,7 +113,11 @@ Global Instance Rseqmx_vdot m1 m2 (rm : nat_R m1 m2) :
 Proof.
   rewrite refinesE => u hu Hu v hv Hv.
   rewrite /vdot /hvdot_op /vdot_seqmx.
-  (* TODO: [seq head 0%C i | i <- hu] refines [seq M i 0 | i <- u] *)
+  have -> : [seq head 0%C i | i <- hu] = [seq u i ord0 | i in 'I_m1].
+  - admit.
+  have -> : [seq head 0%C i | i <- hv] = [seq v i ord0 | i in 'I_m1].
+  - admit.
+  rewrite foldl_bigsum.
 Admitted.
 
 Context (C : Type) (rFAC : rF -> C -> Type).
@@ -118,6 +144,7 @@ Context `{forall n1 n2 (rn : nat_R n1 n2),
 
 (* Locally *)
 Notation RseqmxC := (RseqmxC rFAC).
+
 
 Global Instance RseqmxC_lev m1 m2 (rm : nat_R m1 m2) :
   refines (RseqmxC rm (nat_Rxx 1) ==> RseqmxC rm (nat_Rxx 1) ==> bool_R)
@@ -182,24 +209,29 @@ Definition vP := \matrix_(i < 5, j < 1) 1%:Q.
 
 Goal (col ord0 fN) != (col ord0 fP).
 Proof.
-  by coqeal.
+  Time by coqeal.
 Qed.
 
 Goal (col ord0 fN) <=m (col ord0 fP).
 Proof.
-  by coqeal.
+  Time by coqeal.
 Qed.
-
-Set Typeclasses Debug.
 
 Goal vdot vN vP == 10%:Q.
 Proof.
-  by coqeal.
+  Time by coqeal.
 Qed.
 
 Goal '[col ord0 fN, col ord0 fP] == 8%:Q.
 Proof.
-  by coqeal.
+  Time by coqeal.
 Qed.
+
+Set Typeclasses Debug.
+
+Goal vN (Ordinal (erefl (2 < 5)%N)) ord0 == 2%:Q.
+Proof.
+  Fail by coqeal.
+Abort.
 
 End test.

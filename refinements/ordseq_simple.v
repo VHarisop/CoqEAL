@@ -35,24 +35,34 @@ End Classes.
 Typeclasses Transparent card_of union_of inter_of compl_of adiff_of.
 Typeclasses Transparent empty_of singl_of subset_of.
 
-Instance implem_ord : forall n, implem_of 'I_n 'I_n := fun _ => implem_id.
-
 (** ordseq.v: An implementation of sets of ordinals as sorted sequences
     of ordinals containing unique elements *)
 
 Section ordseq_op.
 
+Instance implem_ord : forall n, implem_of 'I_n 'I_n := fun _ => implem_id.
+
 Definition hset := fun (m : nat) => seq 'I_m.
 
-(** Converting a set of ordinals to a sequence of nats and vice-versa *)
+(** Building ordseqs and sets from a sequence *)
 Definition seq_from_set {m} (I : {set 'I_m}) : hset m :=
   [seq i | i <- enum I].
 
 Definition set_from_seq {m} (I : seq 'I_m) : {set 'I_m} := [set i in I].
 
+(** Building ordseqs and sets from a predicate *)
+Definition seq_from_pred {m} (p : pred 'I_m) : hset m :=
+  filter p (ord_enum m).
+
+Definition set_from_pred {m} (p : pred 'I_m) : {set 'I_m} :=
+  [set i in 'I_m | p i].
+
 (** From finsets to seqs and vice-versa *)
 Definition Rfin {m} : {set 'I_m} -> (hset m) -> Type := fun_hrel (@set_from_seq m).
 Definition Rordseq {m} : (hset m) -> {set 'I_m} -> Type := fun_hrel (@seq_from_set m).
+
+Definition RfinP {m} : {set 'I_m} -> pred 'I_m -> Type := fun_hrel (@set_from_pred m).
+Definition RordseqP {m} : hset m -> pred 'I_m -> Type := fun_hrel (@seq_from_pred m).
 
 Definition ordleq {m1 m2} (x : 'I_m1) (y : 'I_m2) :=
   (nat_of_ord x <= nat_of_ord y)%N.
@@ -85,12 +95,6 @@ Global Instance ordseq_adiff : adiff_of hset :=
 
 Global Instance ordseq_union : union_of hset :=
   fun _ a b => merge ordleq a (ordseq_adiff _ b a).
-
-(* Creating an ordseq from a function on ordinals *)
-Definition ordseq_of_fun m (f : 'I_m -> 'I_m) : seq 'I_m -> hset m := map f.
-
-(* Creating an ordseq from a predicate on ordinals *)
-Definition ordseq_of_pred m (a : pred 'I_m) : seq 'I_m -> hset m := filter a.
 
 Section ordseq_theory.
 
@@ -249,19 +253,46 @@ CoInductive Rordseq_p {m1 m2} (rm : nat_R m1 m2) :
 
 Section Rordseq_theory.
 
+Instance ordseq_of {m} : implem_of (seq 'I_m) (hset m) := map id.
+
 Global Instance Rordseq_p_ordseq_of m :
   refines (list_R (ordinal_R (nat_Rxx m)) ==> Rordseq_p (nat_Rxx m))
-          (@set_from_seq m) (@ordseq_of_fun m id).
+          (@set_from_seq m) (@ordseq_of m).
 Proof.
   rewrite refinesE => x y Heq; constructor.
 Admitted.
 
 Global Instance Rfin_ordseq_of m :
   refines (eq ==> Rfin)
-          (@set_from_seq m) (@ordseq_of_fun m id).
+          (@set_from_seq m) (@ordseq_of m).
 Proof.
   rewrite refinesE => x y ->; rewrite /Rfin.
-  by rewrite /ordseq_of_fun map_id.
+  by rewrite /ordseq_of map_id.
+Qed.
+
+Lemma set_seqK {m} : cancel (@set_from_seq m) seq_from_set.
+Proof.
+  rewrite /cancel => x; rewrite /seq_from_set /set_from_seq.
+Admitted.
+
+Lemma seq_setK {m} : cancel (@seq_from_set m) set_from_seq.
+Proof.
+  rewrite /cancel => x; rewrite /seq_from_set /set_from_seq.
+Admitted.
+
+(** Refinements for creating seqs and sets *)
+Global Instance Rfinp_ordseq_of m :
+  refines (Rfin ==> eq)
+          (@seq_from_set m) id.
+Proof.
+  rewrite refinesE => ? ?; rewrite /Rfin /fun_hrel => <-; exact: set_seqK.
+Qed.
+
+Global Instance Rordseq_ordseq_of m :
+  refines (Rordseq ==> eq)
+    (@set_from_seq m) id.
+Proof.
+  rewrite refinesE => ? ?; rewrite /Rordseq /fun_hrel => <-; exact: seq_setK.
 Qed.
 
 Lemma in_ordseq_lt {m1 m2} (rm : nat_R m1 m2) I J j :
@@ -280,11 +311,18 @@ Lemma in_ordseq_eq {m1 m2} (rm : nat_R m1 m2) I J :
   Rordseq_p rm I J -> eq_ordseq J (seq_from_set I).
 Proof. by case. Qed.
 
+(** Refinement for empty set *)
 Global Instance Rfin_empty m :
   refines (@Rfin m) set0 (ordseq_empty m).
 Proof.
   by rewrite refinesE.
 Qed.
+
+Global Instance Rfin_singleton m :
+  forall i : 'I_m, refines (@Rfin m) (set1 i) ([:: i]).
+Proof.
+  move => i. rewrite refinesE /Rfin /fun_hrel /set_from_seq //=.
+Admitted.
 
 Global Instance Rordseq_p_sub {m1 m2} (rm : nat_R m1 m2) :
   refines (Rordseq_p rm ==> Rordseq_p rm ==> Rordseq_p rm)
@@ -351,7 +389,7 @@ Close Scope rel_scope.
 
 Section test.
 
-From CoqEAL Require Import binord binnat trivial_seq.
+Existing Instance implem_ord.
 
 Definition s1 := set_from_seq [::
   Ordinal (erefl (0 < 7)%N);
@@ -373,7 +411,18 @@ Definition ss2 := seq_from_set s2 : hset 7.
 Definition q1 := @set0 (ordinal_finType 6).
 Definition q2 := [set i | i in [::]] : {set ordinal_finType 6}.
 
-Set Typeclasses Debug.
+Definition q1' := @set1 (ordinal_finType 6) ord0.
+Definition q2' := @set1 (ordinal_finType 6) (Ordinal (erefl (1 < 6))).
+
+Goal q1 = set0.
+Proof.
+  by coqeal.
+Abort.
+
+Goal q1 != q2'.
+Proof.
+  by coqeal.
+Abort.
 
 Goal ~~ (s1 == s2).
 Proof.

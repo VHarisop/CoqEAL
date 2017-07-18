@@ -449,3 +449,5 @@ Goal ~~ (s1 == s2).
 Proof.
   by coqeal.
 Abort.
+
+End test.

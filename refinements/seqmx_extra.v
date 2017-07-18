@@ -227,8 +227,6 @@ Proof.
   Time by coqeal.
 Qed.
 
-Set Typeclasses Debug.
-
 Goal vN (Ordinal (erefl (2 < 5)%N)) ord0 == 2%:Q.
 Proof.
   Fail by coqeal.

@@ -12,6 +12,7 @@
 	refinements/binord.v
 	refinements/natord.v
 	refinements/ordseq.v
+	refinements/ordseq_simple.v
 	refinements/seqmx.v
 	refinements/seqmx_extra.v
 	refinements/hpoly.v

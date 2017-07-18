@@ -324,6 +324,12 @@ Proof.
   move => i. rewrite refinesE /Rfin /fun_hrel /set_from_seq //=.
 Admitted.
 
+Global Instance Rfin_sub {m} :
+  refines (@Rfin m ==> Rfin ==> Rfin)
+  (@setD (ordinal_finType m)) (@ordseq_adiff m).
+Proof.
+Admitted.
+
 Global Instance Rordseq_p_sub {m1 m2} (rm : nat_R m1 m2) :
   refines (Rordseq_p rm ==> Rordseq_p rm ==> Rordseq_p rm)
   (@setD (ordinal_finType m1)) (@ordseq_adiff m2).
@@ -340,6 +346,12 @@ Proof.
       exact: (in_ordseq_sorted rm I' J') |
       exact: (in_ordseq_sorted rm Ialt Jalt) ].
   - admit. (* TODO *)
+Admitted.
+
+Global Instance Rfin_add {m} :
+  refines (@Rfin m ==> Rfin ==> Rfin)
+  (@setU (ordinal_finType m)) (@ordseq_union m).
+Proof.
 Admitted.
 
 Global Instance Rordseq_p_add m1 m2 (rm : nat_R m1 m2) :
@@ -391,22 +403,26 @@ Section test.
 
 Existing Instance implem_ord.
 
-Definition s1 := set_from_seq [::
+Definition ss1 := set_from_seq [::
   Ordinal (erefl (0 < 7)%N);
   Ordinal (erefl (1 < 7)%N);
   Ordinal (erefl (3 < 7)%N);
   Ordinal (erefl (4 < 7)%N)].
 
-Definition s2 := set_from_seq [::
+Definition ss2 := [::
   Ordinal (erefl (0 < 7)%N);
   Ordinal (erefl (1 < 7)%N);
   Ordinal (erefl (3 < 7)%N);
   Ordinal (erefl (5 < 7)%N)].
 
-Eval vm_compute in s1.
+Definition s1 :=
+  ord0 |: ((Ordinal (erefl (1 < 7))) |: ((Ordinal (erefl (3 < 7)%N)) |: set0)).
 
-Definition ss1 := seq_from_set s1 : hset 7.
-Definition ss2 := seq_from_set s2 : hset 7.
+Definition s2 :=
+  ord0 |: ((Ordinal (erefl (1 < 7))) |: ((Ordinal (erefl (4 < 7)%N)) |: set0)).
+
+Definition ss1' := seq_from_set s1 : hset 7.
+Definition ss2' := seq_from_set s2 : hset 7.
 
 Definition q1 := @set0 (ordinal_finType 6).
 Definition q2 := [set i | i in [::]] : {set ordinal_finType 6}.
@@ -424,12 +440,12 @@ Proof.
   by coqeal.
 Abort.
 
-Goal ~~ (s1 == s2).
+Goal ((Ordinal (erefl (1 < 6))) |: q1') == (ord0 |: q2').
 Proof.
-  Fail by coqeal.
+  by coqeal.
 Abort.
 
-Goal eqtype.eq_op s1 s2.
+Goal ~~ (s1 == s2).
 Proof.
-  Fail by coqeal.
+  by coqeal.
 Abort.

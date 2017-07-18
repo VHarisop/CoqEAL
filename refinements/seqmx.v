@@ -270,20 +270,6 @@ Definition pid_seqmx m n r :=
 
 Definition copid_seqmx m r := (seqmx1 m - pid_seqmx m m r)%C.
 
-(* Extract a row submatrix from M *)
-Fixpoint extract_subseqmx_fast (M : @seqmx A) (I : seq nat) : @seqmx A :=
-  let fix extract_subseq_aux s I acc_index :=
-      match s, I with
-      | x :: s', i :: I' =>
-        if i == acc_index then
-          x :: (extract_subseq_aux s' I' (acc_index.+1))
-        else
-          (extract_subseq_aux s' I (acc_index.+1))
-      | _, _ => [::]
-      end
-  in
-  extract_subseq_aux M I 0%N.
-
 End seqmx_op.
 
 Parametricity subType.

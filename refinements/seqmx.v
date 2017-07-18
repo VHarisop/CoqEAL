@@ -62,8 +62,6 @@ Class row_of B I :=
   row_op : forall (m n : nat), I m -> B m n -> B 1 n.
 Class col_of B I :=
   col_op : forall (m n : nat), I n -> B m n -> B m 1.
-Class entry_of B I A :=
-  entry_op : forall (m n : nat), B m n -> I m -> I n -> A.
 Class row_submx_of B S :=
   row_submx_op : forall (m n k : nat), S m k -> B m n -> B k n.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
@@ -75,7 +73,7 @@ End classes.
 Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of.
 Typeclasses Transparent lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of.
 Typeclasses Transparent drsubmx_of row_mx_of col_mx_of block_mx_of.
-Typeclasses Transparent row_of col_of const_mx_of entry_of row_submx_of map_mx_of.
+Typeclasses Transparent row_of col_of const_mx_of row_submx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -247,9 +245,6 @@ Global Instance seqmx_col : col_of hseqmx hord :=
   fun m n j (M : @seqmx A) =>
     map (fun mRow => take 1 (drop j mRow)) M.
 
-Global Instance seqmx_entry : entry_of hseqmx hord A :=
-  fun m n M i j => nth 0%C (nth [::] M i) j.
-
 Global Instance seqmx_row_submx : row_submx_of hseqmx hset :=
   fun m n _ J (M : @seqmx A) =>
     foldr (fun j res => (nth [::] M j) :: res) [::] J.
@@ -307,7 +302,6 @@ Parametricity col_seqmx.
 Parametricity block_seqmx.
 Parametricity seqmx_row.
 Parametricity seqmx_col.
-Parametricity seqmx_entry.
 Parametricity seqmx_row_submx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
@@ -348,15 +342,6 @@ CoInductive Rseqmx {m1 m2} (rm : nat_R m1 m2) {n1 n2} (rn : nat_R n1 n2) :
     size M = m2
   & forall i, i < m2 -> size (nth [::] M i) = n2
   & (forall i j, (A i j = nth 0%C (nth [::] M i) j)) : Rseqmx rm rn A M.
-
-Instance Rseqmx_seqmx_entry
-  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2):
-  refines (Rseqmx rm rn ==> Rord rm ==> Rord rn ==> eq)
-          (@fun_of_matrix _ m1 n1) (@seqmx_entry _ _ m2 n2).
-Proof.
-  rewrite refinesE => ? ? [? ? _ _ ?] i _ <- j _ <-.
-  by rewrite /seqmx_entry.
-Qed.
 
 Lemma ord_enum_eqE p : ord_enum_eq p = enum 'I_p.
 Proof. by rewrite enumT unlock; apply: eq_pmap ; exact: insub_eqE. Qed.
@@ -1040,26 +1025,6 @@ move=> Hs n; elim: n s1 s2 Hs=> [|n IH] s1 s2 Hs Hn /=.
 { by move: Hs Hn; case s1=> [//|h1 t1] Hs _; inversion Hs. }
 move: Hs Hn IH; case s1=> [//|h1 t1] Hs Hn IH.
 by inversion Hs; apply IH.
-Qed.
-
-Global Instance RseqmxC_seqmx_entry
-  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
-  refines (RseqmxC rm rn ==> Rord rm ==> Rord rn ==> rAC)
-          (@fun_of_matrix R m1 n1) (@seqmx_entry C _ m2 n2).
-Proof.
-  rewrite refinesE => _ a' [_ [[a a'' h1 h2 h3] ra'']] i i' ri j j' rj.
-  rewrite h3 /seqmx_entry -ri -rj.
-  apply nth_R_lt.
-  - by apply nth_R_lt=> //; rewrite h1 -(nat_R_eq rm); apply ltn_ord.
-  - by rewrite h2 -?(nat_R_eq rm) -?(nat_R_eq rn); apply ltn_ord.
-Qed.
-
-Global Instance refine_seqmx_entry m n :
-  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> Rord (nat_Rxx m)
-           ==> Rord (nat_Rxx n) ==> rAC)
-          (@fun_of_matrix R _ _) (@seqmx_entry C _ _ _).
-Proof.
-  exact: RseqmxC_seqmx_entry.
 Qed.
 
 Global Instance RseqmxC_seqmx_row_submx

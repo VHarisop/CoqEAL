@@ -2,7 +2,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrnum.
 From mathcomp Require Import finset fintype poly matrix.
 
 From Polyhedra Require Import vector_order inner_product.
-From CoqEAL Require Import hrel param refinements trivial_seq seqmx.
+From CoqEAL Require Import hrel param refinements seqmx.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -25,9 +25,11 @@ Class hvdot_of A I B := hvdot_op : forall n : I, B n 1%N -> B n 1%N -> A.
 Local Notation "''[' u , v ]%HC" := (hvdot_op u v) : hetero_computable_scope.
 Local Notation "''[' u ]%HC" := (hvdot_op u u ) : hetero_computable_scope.
 
+Class fun_of A B I := fun_op : forall m n : nat, B m n -> I m -> I n ->  A.
+
 End classes.
 
-Typeclasses Transparent hlev_of hvdot_of.
+Typeclasses Transparent hlev_of hvdot_of fun_of.
 
 Notation "<=m%HC":= hlev_op.
 Notation "x <=m y" := (hlev_op x y) (at level 0) : hetero_computable_scope.
@@ -63,10 +65,14 @@ Global Instance vdot_seqmx : @hvdot_of A nat (@hseqmx A) :=
     let u' := map (head 0%C) u in
     foldr add_op 0%C (zipwith mul_op v' u').
 
+Global Instance fun_of_seqmx : fun_of A (@hseqmx A) hord :=
+  fun m n M i j => nth 0%C (nth [::] M i) j.
+
 End seqmx_extra_op.
 
 Parametricity lev_seqmx.
 Parametricity vdot_seqmx.
+Parametricity fun_of_seqmx.
 
 Section seqmx_extra_refinements.
 
@@ -99,7 +105,6 @@ Proof.
   - apply: list_R_cons_R; last by exact: Pind.
     exact: list_R_eqxx.
 Qed.
-
 
 Lemma foldr_cons (s : rF) (S : seq rF) :
   foldr +%R 0%R (s :: S) = s + foldr +%R 0%R S.
@@ -135,6 +140,15 @@ Proof.
   - admit.
   rewrite foldr_bigsum.
 Admitted.
+
+Instance Rseqmx_fun_of
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
+  refines (Rseqmx rm rn ==> Rord rm ==> Rord rn ==> eq)
+  (@fun_of_matrix rF m1 n1) (@fun_of_seqmx rF _ _ _).
+Proof.
+  rewrite refinesE => ? ? [? ? _ _ H] i _ <- j _ <-.
+  by rewrite /fun_of_seqmx.
+Qed.
 
 Context (C : Type) (rFAC : rF -> C -> Type).
 Context (I : nat -> Type)
@@ -179,13 +193,33 @@ Global Instance RseqmxC_vdot m1 m2 (rm : nat_R m1 m2) :
           (@vdot m1 rF) (@vdot_seqmx C _ _ _ m2).
 Proof.
   param_comp vdot_seqmx_R. rewrite refinesE; exact: nat_Rxx.
-Qed.
+Admitted.
 
 Global Instance refine_vdot_seqmx m :
   refines (RseqmxC (nat_Rxx m) (nat_Rxx 1) ==> RseqmxC (nat_Rxx m) (nat_Rxx 1)
           ==> rFAC) (@vdot m rF) (@vdot_seqmx C _ _ _ _).
 Proof.
   exact: RseqmxC_vdot.
+Qed.
+
+Global Instance RseqmxC_fun_of_seqmx
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
+  refines (RseqmxC rm rn ==> Rord rm ==> Rord rn ==> rFAC)
+          (@fun_of_matrix rF m1 n1) (@fun_of_seqmx C _ m2 n2).
+Proof.
+  rewrite refinesE => _ a' [_ [[a a'' h1 h2 h3] ra'']] i i' ri j j' rj.
+  rewrite h3 /fun_of_seqmx -ri -rj.
+  apply nth_R_lt.
+  - by apply nth_R_lt=> //; rewrite h1 -(nat_R_eq rm); apply ltn_ord.
+  - by rewrite h2 -?(nat_R_eq rm) -?(nat_R_eq rn); apply ltn_ord.
+Qed.
+
+Global Instance refine_fun_of_seqmx m n :
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> Rord (nat_Rxx m)
+           ==> Rord (nat_Rxx n) ==> rFAC)
+          (@fun_of_matrix rF _ _) (@fun_of_seqmx C _ _ _).
+Proof.
+  exact: RseqmxC_fun_of_seqmx.
 Qed.
 
 Close Scope rel_scope.
@@ -227,7 +261,7 @@ Proof.
   Time by coqeal.
 Qed.
 
-Goal vN (Ordinal (erefl (2 < 5)%N)) ord0 == 2%:Q.
+Goal vN ord0 ord0 == 2%:Q.
 Proof.
   Fail by coqeal.
 Abort.

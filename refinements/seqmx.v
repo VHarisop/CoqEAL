@@ -57,9 +57,11 @@ Class col_mx_of B :=
 Class block_mx_of B :=
   block_mx_op : forall (m1 m2 n1 n2 : nat),
     B m1 n1 -> B m1 n2 -> B m2 n1 -> B m2 n2 -> B (m1 + m2) (n1 + n2).
-
+Class row_of B I :=
+  row_op : forall (m n : nat), I m -> B m n -> B 1 n.
+Class col_of B I :=
+  col_op : forall (m n : nat), I n -> B m n -> B m 1.
 Class const_mx_of A B := const_mx_op : forall (m n : nat), A -> B m n.
-
 Class map_mx_of A B C D :=
   map_mx_op : (A -> B) -> C -> D.
 
@@ -67,7 +69,7 @@ End classes.
 
 Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of
             lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of drsubmx_of
-            row_mx_of col_mx_of block_mx_of const_mx_of map_mx_of.
+            row_mx_of col_mx_of row_of col_of block_mx_of const_mx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -104,6 +106,7 @@ Variable I : nat -> Type.
 
 Definition seqmx {A} := seq (seq A).
 Definition hseqmx {A} := fun (_ _ : nat) => @seqmx A.
+Definition hord := fun (_ : nat) => nat.
 
 Context `{zero_of A, one_of A, add_of A, opp_of A, mul_of A, eq_of A}.
 Context `{forall n, implem_of 'I_n (I n)}.
@@ -205,6 +208,14 @@ Global Instance row_seqmx : row_mx_of hseqmx :=
 Global Instance col_seqmx : col_mx_of hseqmx :=
   fun m1 m2 n (M N : @seqmx A) => M ++ N.
 
+Global Instance seqmx_row : row_of hseqmx hord :=
+  fun m n i (M : @seqmx A) => [:: nth [::] M i].
+
+Global Instance seqmx_col : col_of hseqmx hord :=
+  fun m n j (M : @seqmx A) =>
+    map (fun mRow => take 1 (drop j mRow)) M.
+
+
 Global Instance block_seqmx : block_mx_of hseqmx :=
   fun m1 m2 n1 n2 Aul Aur Adl Adr =>
   col_seqmx (row_seqmx Aul Aur) (row_seqmx Adl Adr).
@@ -224,6 +235,8 @@ Definition pid_seqmx m n r :=
                  if (eqn i j) && (i < r) then 1%C else 0%C).
 
 Definition copid_seqmx m r := (seqmx1 m - pid_seqmx m m r)%C.
+
+
 
 End seqmx_op.
 
@@ -259,6 +272,8 @@ Parametricity dlsubseqmx.
 Parametricity drsubseqmx.
 Parametricity row_seqmx.
 Parametricity col_seqmx.
+Parametricity seqmx_row.
+Parametricity seqmx_col.
 Parametricity block_seqmx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.
@@ -518,6 +533,54 @@ Proof.
     by rewrite ltn_ord.
   rewrite ifN; last by rewrite ltnNge leq_addr.
   by rewrite addnC -addnBA ?subnn ?addn0.
+Qed.
+
+Instance Rseqmx_seqmx_row
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_m1) (k2 : nat) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
+  refines (Rseqmx rm rn ==> Rseqmx r1 rn)
+          (@matrix.row R m1 n1 k1) (@seqmx_row R m2 n2 k2).
+Proof.
+  rewrite refinesE => _ _ [M sM h1 h2 h3].
+  constructor => [ | i ltim2 | i j]; rewrite /seqmx_row; first by done.
+  - move: ltim2; rewrite ltnS leqn0 => /eqP -> /=.
+    apply: h2.
+    + rewrite -(nat_R_eq rk) -(nat_R_eq rm).
+      exact: ltn_ord.
+  - rewrite !mxE -(nat_R_eq rk).
+    rewrite h3.
+    suff -> /=: ((i: nat) = 0)%N by done.
+    + by move: (ltn_ord i); rewrite ltnS leqn0 => /eqP.
+Qed.
+
+Instance Rseqmx_seqmx_col
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_n1) (k2 : nat) (rk : nat_R k1 k2) (r1 : nat_R 1 1) :
+  refines (Rseqmx rm rn ==> Rseqmx rm r1)
+          (@matrix.col R m1 n1 k1) (@seqmx_col R m2 n2 k2).
+Proof.
+  rewrite refinesE => _ _ [M sM h1 h2 h3].
+  constructor.
+  - by rewrite size_map h1.
+  - rewrite -h1 => i ltiSz; rewrite (nth_map [::]); last by exact: ltiSz.
+    rewrite size_take size_drop h2; last by rewrite h1 in ltiSz; exact: ltiSz.
+    case: (boolP ((n2 - k2) > 1)) => [ //= | ]; rewrite -leqNgt.
+    have : (k2 <= n2 - 1)%N.
+    + rewrite -ltnS. move: (ltn_ord k1).
+      rewrite (nat_R_eq rk) (nat_R_eq rn) => k2_ltn_n2.
+      apply: (leq_trans k2_ltn_n2). by rewrite subn1 leqSpred.
+    + move => Hk2n2 Hn2k2.
+      have : (k2 - k2 <= n2 - 1 - k2)%N by apply: leq_sub.
+      rewrite subnn -subnDA addnC subnDA.
+      rewrite -(leq_add2r 1) subnK; last first.
+      * move: (ltn_ord k1). rewrite (nat_R_eq rk) (nat_R_eq rn) => Hnk.
+        by rewrite subn_gt0.
+      * rewrite add0n => Hk2'. move {Hk2n2}.
+        apply/eqP; rewrite eqn_leq. by rewrite Hn2k2 Hk2'.
+  - move => i j. rewrite (nth_map [::] [::]); last first.
+    + rewrite h1 -(nat_R_eq rm). exact: ltn_ord.
+    + rewrite !mxE nth_take // -(nat_R_eq rk).
+      by rewrite zmodp.ord1 nth_drop addn0; exact: h3.
 Qed.
 
 Instance Rseqmx_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
@@ -837,6 +900,43 @@ Global Instance refine_col_seqmx m1 m2 n :
                    ==> RseqmxC (addn_R (nat_Rxx m1) (nat_Rxx m2)) (nat_Rxx n))
           (@matrix.col_mx R m1 m2 n) (@col_seqmx C m1 m2 n).
 Proof. exact: RseqmxC_col_seqmx. Qed.
+
+Global Instance RseqmxC_seqmx_row
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_m1) k2 (rk : nat_R k1 k2) :
+  refines (RseqmxC rm rn ==> RseqmxC (nat_Rxx 1) rn)
+          (@matrix.row R m1 n1 k1) (@seqmx_row C m2 n2 k2).
+Proof.
+  eapply (refines_trans (b := (seqmx_row k2))); tc.
+  - exact: Rseqmx_seqmx_row.
+  - rewrite refinesE => // ? ?; apply: seqmx_row_R; repeat exact: nat_Rxx.
+Qed.
+
+Global Instance refine_seqmx_row m n k:
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx 1) (nat_Rxx n))
+          (@matrix.row R m n k) (@seqmx_row C m n k).
+Proof.
+  apply: RseqmxC_seqmx_row; exact: nat_Rxx.
+Qed.
+
+Global Instance RseqmxC_seqmx_col
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
+  (k1 : 'I_n1) k2 (rk : nat_R k1 k2)
+  (r1 : nat_R 1 1) :
+  refines (RseqmxC rm rn ==> RseqmxC rm r1)
+          (@matrix.col R m1 n1 k1) (@seqmx_col C m2 n2 k2).
+Proof.
+   eapply (refines_trans (b := (seqmx_col k2))); tc.
+  - apply: Rseqmx_seqmx_col; exact: rk.
+  - rewrite refinesE => // ? ?; apply: seqmx_col_R; repeat exact: nat_Rxx.
+Qed.
+
+Global Instance refine_seqmx_col m n k :
+  refines (RseqmxC (nat_Rxx m) (nat_Rxx n) ==> RseqmxC (nat_Rxx m) (nat_Rxx 1))
+          (@matrix.col R m n k) (@seqmx_col C m n k).
+Proof.
+  apply: RseqmxC_seqmx_col; exact: nat_Rxx.
+Qed.
 
 Global Instance RseqmxC_block_seqmx m11 m12 (rm1 : nat_R m11 m12) m21 m22
        (rm2 : nat_R m21 m22) n11 n12 (rn1 : nat_R n11 n12) n21 n22
@@ -1463,6 +1563,31 @@ Goal (M + N + M + N + M + N + N + M + N) *m
 Proof.
 apply/eqP.
 Time by coqeal.
+Abort.
+
+Goal (row ord0 M) == (row (Ordinal (erefl (1 < 2))) M).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (M *m (row ord0 M)^T) == (M *m (row (Ordinal (erefl (1 < 2))) M)^T).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (row ord0 P) != (row ord0 N).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (col ord0 M) == (col (Ordinal (erefl (1 < 2))) M).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (col ord0 P) != (col ord0 N).
+Proof.
+  Time by coqeal.
 Abort.
 
 End testmx.

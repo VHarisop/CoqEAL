@@ -1,0 +1,13 @@
+-R theory CoqEAL.theory
+	theory/binetcauchy.v
+	theory/coherent.v
+	theory/dvdring.v
+	theory/edr.v
+	theory/fpmod.v
+	theory/kaplansky.v
+	theory/minor.v
+	theory/mxstructure.v
+	theory/similar.v
+	theory/stronglydiscrete.v
+	theory/ssrcomplements.v
+-arg "-w all"

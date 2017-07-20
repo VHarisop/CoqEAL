@@ -73,7 +73,8 @@ End classes.
 
 Typeclasses Transparent hzero_of hmul_of heq_of top_left_of usubmx_of dsubmx_of
             lsubmx_of rsubmx_of ulsubmx_of ursubmx_of dlsubmx_of drsubmx_of
-            row_mx_of col_mx_of row_of col_of xrow_of rowx_of block_mx_of const_mx_of map_mx_of.
+            row_mx_of col_mx_of row_of col_of xrow_of rowx_of
+            block_mx_of const_mx_of map_mx_of.
 
 Notation "0" := hzero_op : hetero_computable_scope.
 (* Notation "- x" := (hopp_op x) : hetero_computable_scope. *)
@@ -286,10 +287,10 @@ Parametricity dlsubseqmx.
 Parametricity drsubseqmx.
 Parametricity row_seqmx.
 Parametricity col_seqmx.
-Parametricity xrow_seqmx.
-Parametricity rowx_seqmx.
 Parametricity seqmx_row.
 Parametricity seqmx_col.
+Parametricity xrow_seqmx.
+Parametricity rowx_seqmx.
 Parametricity block_seqmx.
 Parametricity delta_seqmx.
 Parametricity trace_seqmx.

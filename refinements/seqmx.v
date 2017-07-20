@@ -1,5 +1,5 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat div seq ssralg.
-From mathcomp Require Import path choice fintype tuple finset bigop poly matrix mxpoly.
+From mathcomp Require Import path perm choice fintype tuple finset bigop poly matrix mxpoly.
 
 From CoqEAL Require Import hrel param refinements trivial_seq.
 
@@ -1165,8 +1165,24 @@ Proof.
       * by apply: h2; rewrite -(nat_R_eq rm) -(nat_R_eq rj) ltn_ord.
       * rewrite nth_set_nth //=; case: (i == j2); last by exact: h2.
         by apply: h2; rewrite -(nat_R_eq rm) -(nat_R_eq ri) ltn_ord.
-  - rewrite mxE. admit.
-Admitted.
+  - rewrite mxE /xrow_seqmx !nth_set_nth //= -(nat_R_eq rj).
+    (* Context switches *)
+    have Hcontext : forall a b : 'I_m1, (a == b) = (a == b :> nat) by [].
+    rewrite nth_set_nth //=; case/boolP: (i == j1 :> nat).
+    + rewrite -Hcontext => /eqP ->; rewrite tpermR -(nat_R_eq ri).
+      exact: h3.
+    + rewrite -Hcontext => /eqP-Hneq. case/boolP: (i == i1 :> nat).
+      * rewrite -Hcontext => /eqP-Heq. rewrite Heq tpermL -(nat_R_eq ri) //=.
+        have -> : (i1 == i1 :> nat) by rewrite -Hcontext; move/eqP: Heq.
+        exact: h3.
+      * have neq_irr : forall a b : nat, (a != b) = (b != a).
+        by move => a b; rewrite !neq_ltn orbC.
+      * rewrite -Hcontext => /eqP-Hneq_i; rewrite tpermD.
+        - suff -> : (i == i2 :> nat) = false by exact: h3.
+          rewrite -(nat_R_eq ri) -Hcontext. by apply/eqP; exact: Hneq_i.
+        - by move/eqP: Hneq_i; rewrite neq_irr.
+        - by move/eqP: Hneq; rewrite neq_irr.
+Qed.
 
 Instance Rseqmx_delta_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
          (i1 : 'I_m1) (i2 : 'I_m2) (ri : nat_R i1 i2) (j1 : 'I_n1) (j2 : 'I_n2)

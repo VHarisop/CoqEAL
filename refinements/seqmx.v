@@ -228,8 +228,8 @@ Global Instance xrow_seqmx : xrow_of hseqmx hord :=
 
 Global Instance rowx_seqmx : rowx_of hseqmx hord :=
   fun m n i (M : @seqmx A) =>
-    let M_before := drop i M in
-    let M_after := behead M_before in
+    let M_before := take i M in
+    let M_after := behead (drop i M) in
     M_before ++ M_after.
 
 Global Instance block_seqmx : block_mx_of hseqmx :=
@@ -1193,12 +1193,51 @@ Proof.
         - by move/eqP: Hneq; rewrite neq_irr.
 Qed.
 
+Lemma ltn_leq_trans: forall m n p, (m < n) -> (n <= p)%N -> m < p.
+Proof.
+  move => m n p ltnm. rewrite leq_eqVlt => /orP; case.
+  - by move/eqP => <-.
+  - exact: ltn_trans.
+Qed.
+
+Lemma size_take_leq_take_arg {T} i (S : seq T) : (size (take i S) <= i)%N.
+Proof.
+  rewrite size_take; case/boolP: (i < size S); first by done.
+  by rewrite -leqNgt.
+Qed.
+
+Lemma size_take_leq_size {T} i (S : seq T) : (size (take i S) <= (size S))%N.
+Proof.
+  rewrite size_take; case/boolP: (i < size S); [ exact: ltnW | done ].
+Qed.
+
 Instance Rseqmx_rowx_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
   (i1: 'I_m1.+1) (i2: nat) (ri : nat_R i1 i2) :
   refines (Rseqmx (nat_R_S_R rm) rn ==> Rseqmx rm rn)
     (@matrix.row' R m1.+1 n1 i1) (@rowx_seqmx R m2 n2 i2).
 Proof.
-  rewrite refinesE => _ _ [s M h1 h2 h3]; constructor.
+  set Hm := (nat_R_eq rm). set Hi := (nat_R_eq ri).
+  rewrite refinesE => _ _ [s M h1 h2 h3]; rewrite /rowx_seqmx; constructor.
+  - rewrite size_cat size_take size_behead size_drop.
+    have lti2_szM : i2 < size M by rewrite -Hi h1 -Hm ltn_ord.
+    rewrite lti2_szM -subn1 addnBA; last by rewrite subn_gt0 -Hi h1 -Hm ltn_ord.
+    rewrite subnKC; last by apply: ltnW. by rewrite subn1 h1 //=.
+  - move => i ltim2. rewrite nth_cat; case/boolP: (i < size (take i2 M))%N.
+    + move => ltiSz_take. rewrite nth_take. apply: h2.
+      * exact: (ltn_trans ltim2 (@ltnSn m2)).
+      * move: (size_take_leq_take_arg i2 M). exact: ltn_leq_trans.
+    + move => nltiSz_take. rewrite nth_behead nth_drop.
+      suff : ((i2 + (i - size (take i2 M)).+1) < m2.+1)%N by exact: h2.
+      rewrite size_take.
+      have lti2szM: i2 < size M by rewrite h1 -Hm -Hi ltn_ord.
+      rewrite lti2szM -[in m2.+1]addn1 -subSn.
+      * rewrite subnKC.
+        - by rewrite -[i.+1]addn1 ltn_add2r.
+        - move: nltiSz_take; rewrite -leqNgt size_take lti2szM. exact: leqW.
+        - move: nltiSz_take; by rewrite -leqNgt size_take lti2szM.
+  - move => i j. rewrite nth_cat; case/boolP: (i < size (take i2 M)).
+    move => Hlti. move: (size_take_leq_size i2 M) => Hleqi.
+    have Hltisz : i < m2.+1 by rewrite -h1; exact: (ltn_leq_trans Hlti Hleqi).
 Admitted.
 
 Instance Rseqmx_delta_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
@@ -1707,6 +1746,11 @@ Proof.
 Abort.
 
 Goal (row' ord0 P) != (row' (Ordinal (erefl (1 < 2)%N)) M).
+Proof.
+  Time by coqeal.
+Abort.
+
+Goal (row' ord0 P) == (row' (Ordinal (erefl (1 < 2)%N)) P).
 Proof.
   Time by coqeal.
 Abort.

@@ -1236,9 +1236,15 @@ Proof.
         - by rewrite -[i.+1]addn1 ltn_add2r.
         - move: nltiSz_take; rewrite -leqNgt size_take lti2szM. exact: leqW.
         - move: nltiSz_take; by rewrite -leqNgt size_take lti2szM.
-  - move => i j. rewrite nth_cat; case/boolP: (i < size (take i2 M)).
-    move => Hlti. move: (size_take_leq_size i2 M) => Hleqi.
-    have Hltisz : i < m2.+1 by rewrite -h1; exact: (ltn_leq_trans Hlti Hleqi).
+  - move => i j. rewrite nth_cat !mxE; case/boolP: (i < size (take i2 M)).
+    + move => Hlti. move: (size_take_leq_size i2 M) => Hleqi.
+      have Hltisz : i < m2.+1 by rewrite -h1; exact: (ltn_leq_trans Hlti Hleqi).
+      rewrite nth_take;
+      last by apply: (ltn_leq_trans Hlti _); exact: size_take_leq_take_arg.
+      (* Need to show: s (lift i1 i) j is the same as s i j when i1 is less
+         than i *)
+      admit.
+    + admit.
 Admitted.
 
 Instance Rseqmx_delta_seqmx m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2)
@@ -1655,6 +1661,11 @@ Definition Mn3 : 'M[int]_(2,2) := \matrix_(i,j < 2) - 3%:Z.
 Definition M6 : 'M[int]_(2,2) := \matrix_(i,j < 2) 6%:Z.
 
 Definition V : 'rV[int]_(3) := \matrix_(i < 1, j < 3) 3%:Z.
+
+Goal M3 != Mn3.
+Proof.
+  by coqeal.
+Abort.
 
 Goal (diag_mx V == 2%:Z *: diag_mx V - diag_mx V).
 by coqeal.

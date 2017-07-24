@@ -11,6 +11,7 @@
 	refinements/poly_div.v
 	refinements/binord.v
 	refinements/seqmx.v
+	refinements/seqmx_complements.v
 	refinements/hpoly.v
 	refinements/bareiss.v
 	refinements/rational.v

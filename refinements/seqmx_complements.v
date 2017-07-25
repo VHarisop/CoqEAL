@@ -43,9 +43,15 @@ Class fun_of_of A I B :=
 Class store_of A I B :=
   store_op : forall (m n : nat), B m n -> I m -> I n -> A -> B m n.
 
+(** Classes needed for LUP decomp **)
+Class pivot_of B := pivot_op : forall (m n : nat), B m n -> option nat.
+
+(* Multiplication with a unit vector *)
+Class unit_mul_of B I := unit_mul_op : forall m : nat, B m 1 -> I m -> B 1 1.
+
 End classes.
 
-Typeclasses Transparent fun_of_of store_of.
+Typeclasses Transparent fun_of_of store_of pivot_of unit_mul_of.
 
 (** ** General definitions for seqmx *)
 
@@ -56,6 +62,9 @@ Context `{zero_of A}.
 
 Global Instance fun_of_seqmx : fun_of_of A ord_instN hseqmx :=
   fun (_ _ : nat) M i j => nth 0%C (nth [::] M i) j.
+
+Global Instance unit_mul_of_seqmx : unit_mul_of hseqmx ord_instN :=
+  fun (_ : nat) (M : @seqmx A) i => [:: nth [::] M i].
 
 Fixpoint store_aux T s k (v : T) :=
   match s, k with
@@ -78,6 +87,11 @@ Context `{eq_of A}.
 
 Global Instance heq_seqmx : heq_of (@hseqmx A) :=
   fun (_ _ : nat) => eq_seq (eq_seq eq_op).
+
+Global Instance pivot_of_seqmx `{Heq : eq_of A} : pivot_of hseqmx :=
+  fun (_ _ : nat) M =>
+    let pIdx := find (fun x => ~~(eq_op x 0%C)) (map (head 0%C) M) in
+    if pIdx < seq.size M then Some pIdx else None.
 
 End seqmx_op.
 
@@ -170,7 +184,7 @@ apply (IH (Ordinal Hi) (Ordinal Hi')) => //.
 by move=> k Hk; move: (h2 k.+1); apply.
 Qed.
 
-Context `{eq_of A}.
+Context `{eq_of A, zero_of nat_eqType, Enat : eq_of nat_eqType}.
 
 Global Instance heq_ssr : heq_of (matrix A) :=
   fun n1 n2 a b => [forall i, [forall j, (a i j == b i j)%C]].
@@ -207,11 +221,38 @@ rewrite nth_zip ?ha2 ?hb2 //=; apply.
 by rewrite size1_zip ha2 ?hb2 // -(nat_R_eq rn).
 Qed.
 
+Global Instance Rseqmx_pivot_op
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
+  refines (Rseqmx rm (nat_R_S_R rn) ==> option_R (Rord rm))
+    (fun M => [pick k | M k ord0 != 0])
+    (pivot_of_seqmx m2 n2.+1).
+Proof.
+  rewrite refinesE => // a b [s M h1 h2 h3].
+  rewrite /pivot_of_seqmx; case: pickP => //=.
+  - move => x. rewrite h3 nth0 => Hsx; rewrite find_map -!has_find.
+    have -> : has (preim (head 0%C) (fun x0 : nat => ~~ (x0 == 0)%C)) M.
+    + apply/(has_nthP [::]); exists x.
+      * rewrite h1 -(nat_R_eq rm); exact: ltn_ord.
+      * rewrite /preim. admit.
+    + admit.
+  - admit.
+Admitted.
+
+Global Instance refine_pivot_of_seqmx m n :
+  refines (Rseqmx (nat_Rxx m) (nat_R_S_R (nat_Rxx n)) ==> option_R (Rord (nat_Rxx m)))
+    (fun M => [pick k | M k ord0 != 0])
+    (pivot_of_seqmx m n.+1).
+Proof.
+  exact: Rseqmx_pivot_op.
+Qed.
+
 (** ** Parametricity *)
 
 Parametricity fun_of_seqmx.
 Parametricity store_seqmx.
 Parametricity heq_seqmx.
+Parametricity pivot_of_seqmx.
+Parametricity unit_mul_of_seqmx.
 
 Section seqmx_param.
 
@@ -263,6 +304,14 @@ Global Instance refine_fun_of_seqmx m n :
     (@fun_of_seqmx C _ m n).
 Proof. exact: RseqmxC_fun_of_seqmx. Qed.
 
+(* Global Instance RseqmxC_pivot_op
+  m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
+  refines (RseqmxC rAC rm (nat_R_S_R rn) ==> option_R (Rord rm))
+    (fun M => [pick k | M k ord0 != 0])
+    (pivot_of_seqmx m2 n2.+1).
+Proof.
+Admitted. *)
+
 Global Instance refine_foldl
   (T1 T2 : Type) (rT : T1 -> T2 -> Type) (R1 R2 : Type) (rR : R1 -> R2 -> Type) :
   refines ((rR ==> rT ==> rR) ==> rR ==> list_R rT ==> rR)
@@ -277,5 +326,64 @@ by apply refinesP; refines_apply; rewrite refinesE; inversion rs'.
 Qed.
 
 End seqmx_param.
+
+Section unit_mul_param.
+
+From mathcomp Require Import ssralg ssrnum zmodp.
+
+Import GRing.Theory.
+
+Variable R : ringType.
+
+Instance Rseqmx_unit_mul_of_seqmx n1 n2 (rn : nat_R n1 n2)
+  i j (Rij : Rord rn i j) :
+  refines (Rseqmx rn (nat_Rxx 1) ==> Rseqmx (nat_Rxx 1) (nat_Rxx 1))
+  (fun (M : 'M[R]_(n1, 1)) => (delta_mx ord0 i) *m M)
+  (fun M => @unit_mul_of_seqmx R n2 M j).
+Proof.
+  rewrite !refinesE => _ _ [s M h1 h2 h3]. rewrite /Rord in Rij.
+  move: Rij => <-; constructor; rewrite /unit_mul_of_seqmx.
+  - by [].
+  - move => i0 Hi0; suff -> : i0 = 0%N.
+    + rewrite nth0 //= h2; first by done.
+      rewrite -(nat_R_eq rn); exact: ltn_ord.
+    + move: Hi0; by elim: i0 => //.
+  - rewrite -rowE => i0 j0; rewrite !mxE. suff -> : (i0 = 0 :> nat)%N.
+    + by rewrite nth0 //=.
+    + by rewrite zmodp.ord1.
+Qed.
+
+Context (C : ringType) (rAC : R -> C -> Type) (I : nat -> Type).
+Context `{!zero_of C, !spec_of C A}.
+Context `{forall n, implem_of 'I_n (I n)}.
+
+Context `{!eq_of C}.
+
+Global Instance RseqmxC_unit_mul_of_seqmx
+  n1 n2 (rn : nat_R n1 n2) i j (Rij : Rord rn i j) :
+  refines (RseqmxC rAC rn (nat_Rxx 1) ==> RseqmxC rAC (nat_Rxx 1) (nat_Rxx 1))
+  (fun (M : 'M[R]_(n1, 1)) => (delta_mx ord0 i) *m M)
+  (fun M => @unit_mul_of_seqmx C n2 M j).
+Proof.
+  eapply refines_trans; tc.
+  - exact: Rseqmx_unit_mul_of_seqmx.
+  - rewrite refinesE => // x y Rxy; apply: unit_mul_of_seqmx_R.
+    + exact: nat_Rxx.
+    + exact: Rxy.
+    + move: Rij; rewrite /Rord => <-.
+      suff -> : (i + 0)%coq_nat = i%N by exact: nat_Rxx.
+      by case: i => //=.
+Qed.
+
+Global Instance refine_unit_mul_of_seqmx n i :
+  refines (RseqmxC rAC (nat_Rxx n) (nat_Rxx 1) ==>
+           RseqmxC rAC (nat_Rxx 1) (nat_Rxx 1))
+  (fun (M : 'M[R]_(n, 1)) => (delta_mx ord0 i) *m M)
+  (fun M => @unit_mul_of_seqmx C n M i).
+Proof.
+  exact: RseqmxC_unit_mul_of_seqmx.
+Qed.
+
+End unit_mul_param.
 
 End seqmx_theory.

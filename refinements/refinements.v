@@ -324,10 +324,11 @@ Notation "x %/ y" := (div_op x y)   : computable_scope.
 Notation "x ^-1"  := (inv_op x)     : computable_scope.
 Notation "x %% y" := (mod_op x y)   : computable_scope.
 Notation "*:%C"   := scale_op.
-Notation "x *: y" := (scale_op x y) : computable_scope.
-Notation "x == y" := (eq_op x y)    : computable_scope.
-Notation "x <= y" := (leq_op x y)   : computable_scope.
-Notation "x < y"  := (lt_op x y)    : computable_scope.
+Notation "x *: y" := (scale_op x y)   : computable_scope.
+Notation "x == y" := (eq_op x y)      : computable_scope.
+Notation "x != y" := (~~(eq_op x y))  : computable_scope.
+Notation "x <= y" := (leq_op x y)     : computable_scope.
+Notation "x < y"  := (lt_op x y)      : computable_scope.
 Notation cast     := (@cast_op _).
 
 Ltac simpC :=
@@ -343,6 +344,7 @@ Ltac simpC :=
       | rewrite -[(_ %/ _)%C]/(_ %/ _)%R
       | rewrite -[(_ %% _)%C]/(_ %% _)%R
       | rewrite -[(_ == _)%C]/(_ == _)%bool
+      | rewrite -[(_ != _)%C]/(_ != _)%bool
       ].
 
 (* Section testmx. *)

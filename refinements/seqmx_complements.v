@@ -45,6 +45,62 @@ Proof.
   rewrite /eq_op/eq_nat eqnE hx hy; by case/boolP: (x' == y').
 Qed.
 
+Section pick_refinement.
+
+Instance eq_option {m} :
+  forall (x y : option 'I_m), option_R eq x y -> refines eq x y.
+Proof.
+  rewrite refinesE => x y /=; case; last by [].
+  by move => a b ->.
+Qed.
+
+Global Instance Roption_eq m :
+  refines (option_R eq ==> option_R eq ==> bool_R)
+          (@eqtype.eq_op (option_eqType (ordinal_finType m))) eqtype.eq_op.
+Proof.
+  rewrite refinesE=> x x' /= hx y y' /= hy.
+  have -> : eq x x' by apply refinesP; apply: eq_option; exact: hx.
+  have -> : eq y y' by apply refinesP; apply: eq_option; exact: hy.
+  by case/boolP: (x' == y').
+Qed.
+
+Global Instance Roption_ord_eq m :
+  refines (
+  option_R (Rord (nat_Rxx m)) ==> option_R (Rord (nat_Rxx m))  ==> bool_R)
+          (@eqtype.eq_op (option_eqType (ordinal_finType m))) eqtype.eq_op.
+Proof.
+Admitted.
+
+(* An untyped version of pick. *)
+Definition pick_iota {n} f' := ohead (filter f' (iota 0 n)).
+
+Global Instance Rpick (n1 n2: nat) (rn: nat_R n1 n2) f f' :
+  refines (Rord rn ==> eq) f f' ->
+  refines (option_R (Rord rn)) (@pick _ f) (@pick_iota n2 f').
+Proof.
+Admitted.
+
+Global Instance Rpick' (n1 n2: nat) (Rn: nat_R n1 n2) f f'
+ `{forall x y, refines (Rord Rn) x y ->
+               refines eq (f x) (f' y)} :
+  refines (option_R (Rord Rn)) (@pick _ f) (@pick_iota n2 f').
+Proof.
+Admitted.
+
+(* Need a variant of this to build the pick thing
+Instance Rseqmx_mkseqmx_ord n1 n2 (rn : nat_R n1 n2) :
+  refines (eq ==> Rord rn) (matrix_of_fun matrix_key)
+          (@mkseqmx_ord R m1 n1). *)
+
+Typeclasses eauto := debug.
+
+Goal (@pick (ordinal_finType 5) (fun i => i < 3)) == Some ord0.
+Proof.
+  try by coqeal.
+Abort.
+
+End pick_refinement.
+
 Section classes.
 
 (** ** Definition of operational type classes *)
@@ -95,7 +151,7 @@ Global Instance heq_seqmx : heq_of (@hseqmx A) :=
 
 Global Instance pivot_of_seqmx `{Heq : eq_of A} : pivot_of hseqmx :=
   fun (_ _ : nat) M =>
-    let pIdx := find (fun x => ~~(eq_op x 0%C)) (map (head 0%C) M) in
+    let pIdx := find (fun x => (x != 0)%C) (map (head 0%C) M) in
     if pIdx < seq.size M then Some pIdx else None.
 
 End seqmx_op.
@@ -229,7 +285,7 @@ Qed.
 Global Instance Rseqmx_pivot_op
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
   refines (Rseqmx rm (nat_R_S_R rn) ==> option_R (Rord rm))
-    (fun M => [pick k | M k ord0 != 0])
+    (fun M => [pick k | M k ord0 != 0 ])
     (pivot_of_seqmx m2 n2.+1).
 Proof.
   rewrite refinesE => // a b [s M h1 h2 h3].
@@ -238,7 +294,7 @@ Proof.
     have -> : has (preim (head 0%C) (fun x0 : nat => ~~ (x0 == 0)%C)) M.
     + apply/(has_nthP [::]); exists x.
       * rewrite h1 -(nat_R_eq rm); exact: ltn_ord.
-      * rewrite /preim. admit.
+      * rewrite /preim inE. admit.
     + admit.
   - admit.
 Admitted.
@@ -311,19 +367,18 @@ Proof. exact: RseqmxC_fun_of_seqmx. Qed.
 Global Instance RseqmxC_pivot_op
   m1 m2 (rm : nat_R m1 m2) n1 n2 (rn : nat_R n1 n2) :
   refines (RseqmxC rAC rm (nat_R_S_R rn) ==> option_R (Rord rm))
-    (fun M => [pick k | ~~(eq_op (M k ord0) 0%C)])
+    (fun M => [pick k | (M k ord0 != 0)%C ])
     (pivot_of_seqmx m2 n2.+1).
 Proof.
   eapply refines_trans; tc.
-  - (* exact: Rseqmx_pivot_op. <- This probably fails due to absence of op
-       for (_ != _). *) admit.
+  - admit.
   - admit.
 Admitted.
 
 Global Instance refine_pivot_op m n :
   refines (RseqmxC rAC (nat_Rxx m) (nat_R_S_R (nat_Rxx n))
            ==> option_R (Rord (nat_Rxx m)))
-    (fun M => [pick k | ~~(eq_op (M k ord0) zero_op)])
+    (fun M => [pick k | (M k ord0 != 0)%C ])
     (pivot_of_seqmx m n.+1).
 Proof. exact: RseqmxC_pivot_op. Qed.
 

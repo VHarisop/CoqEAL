@@ -45,62 +45,6 @@ Proof.
   rewrite /eq_op/eq_nat eqnE hx hy; by case/boolP: (x' == y').
 Qed.
 
-Section pick_refinement.
-
-Instance eq_option {m} :
-  forall (x y : option 'I_m), option_R eq x y -> refines eq x y.
-Proof.
-  rewrite refinesE => x y /=; case; last by [].
-  by move => a b ->.
-Qed.
-
-Global Instance Roption_eq m :
-  refines (option_R eq ==> option_R eq ==> bool_R)
-          (@eqtype.eq_op (option_eqType (ordinal_finType m))) eqtype.eq_op.
-Proof.
-  rewrite refinesE=> x x' /= hx y y' /= hy.
-  have -> : eq x x' by apply refinesP; apply: eq_option; exact: hx.
-  have -> : eq y y' by apply refinesP; apply: eq_option; exact: hy.
-  by case/boolP: (x' == y').
-Qed.
-
-Global Instance Roption_ord_eq m :
-  refines (
-  option_R (Rord (nat_Rxx m)) ==> option_R (Rord (nat_Rxx m))  ==> bool_R)
-          (@eqtype.eq_op (option_eqType (ordinal_finType m))) eqtype.eq_op.
-Proof.
-Admitted.
-
-(* An untyped version of pick. *)
-Definition pick_iota {n} f' := ohead (filter f' (iota 0 n)).
-
-Global Instance Rpick (n1 n2: nat) (rn: nat_R n1 n2) f f' :
-  refines (Rord rn ==> eq) f f' ->
-  refines (option_R (Rord rn)) (@pick _ f) (@pick_iota n2 f').
-Proof.
-Admitted.
-
-Global Instance Rpick' (n1 n2: nat) (Rn: nat_R n1 n2) f f'
- `{forall x y, refines (Rord Rn) x y ->
-               refines eq (f x) (f' y)} :
-  refines (option_R (Rord Rn)) (@pick _ f) (@pick_iota n2 f').
-Proof.
-Admitted.
-
-(* Need a variant of this to build the pick thing
-Instance Rseqmx_mkseqmx_ord n1 n2 (rn : nat_R n1 n2) :
-  refines (eq ==> Rord rn) (matrix_of_fun matrix_key)
-          (@mkseqmx_ord R m1 n1). *)
-
-Typeclasses eauto := debug.
-
-Goal (@pick (ordinal_finType 5) (fun i => i < 3)) == Some ord0.
-Proof.
-  try by coqeal.
-Abort.
-
-End pick_refinement.
-
 Section classes.
 
 (** ** Definition of operational type classes *)

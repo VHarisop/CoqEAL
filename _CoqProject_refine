@@ -12,6 +12,7 @@
 	refinements/binord.v
 	refinements/seqmx.v
 	refinements/seqmx_complements.v
+	refinements/pick.v
 	refinements/hpoly.v
 	refinements/bareiss.v
 	refinements/rational.v

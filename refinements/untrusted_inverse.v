@@ -331,6 +331,9 @@ Proof.
   by move: (mulmx1_unit AmulB_eq1) => [-> _].
 Qed.
 
+(** Oversimplistic tactic to verify inverse matrices *)
+Ltac verify_inverse := try apply: mulmx_eq1_invmxE; apply/eqP; coqeal.
+
 End ExtraTheory.
 
 End UntrustedInverse.

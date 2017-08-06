@@ -3,6 +3,8 @@ From mathcomp Require Import choice fintype bigop matrix.
 
 From CoqEAL Require Import hrel param refinements seqmx seqmx_complements.
 
+Import Refinements.Op.
+
 Section option_refinements.
 
 Global Instance eq_option {T : Type} :
@@ -53,6 +55,11 @@ Global Instance Rpick (n1 n2: nat) (rn: nat_R n1 n2) f f' :
 Proof.
 Admitted.
 
+Lemma pick_eq_filter {m} (f : pred (ordinal_finType m)) :
+  [pick i | f i] = ohead (filter f (ord_enum m)).
+Proof.
+Admitted.
+
 (** XA's version
 Global Instance Rpick' (n1 n2: nat) (Rn: nat_R n1 n2) f f'
  `{H : forall x y, refines (Rord Rn) x y ->
@@ -61,6 +68,18 @@ Global Instance Rpick' (n1 n2: nat) (Rn: nat_R n1 n2) f f'
 Proof.
 Admitted.
 *)
+
+Global Instance refines_pivot {T : Type} {m n : nat}
+  `{T0: zero_of T, eq_of T, zero_of nat} :
+  forall (M : 'M[T]_(m, _)) (hM : @hseqmx T m _),
+  refines (Rseqmx (nat_Rxx m) (nat_R_S_R (nat_Rxx n))) M hM ->
+  refines (Rord (nat_Rxx m) ==> eq)
+  (fun x : ordinal_finType m => (M x ord0 != 0)%C)
+  (fun x => (fun_of_seqmx hM x 0 != 0)%C).
+Proof.
+  rewrite !refinesE /Rord => _ hM [s M h1 h2 h3] x y /= <-.
+  rewrite /fun_of_seqmx h3 /=.
+Admitted.
 
 (** Can we somehow avoid writing a different instance for every
     pred that we want to refine ? *)
@@ -88,6 +107,15 @@ Qed.
 Goal (@pick (ordinal_finType 5) (fun i => i < 0)) == None.
 Proof.
   by coqeal.
+Abort.
+
+Typeclasses eauto := debug.
+
+Let Mn := \matrix_(i, j < 2) 5%N.
+
+Goal (@pick _ (fun i => Mn i ord0 != 0)) != None.
+Proof.
+  try by coqeal.
 Abort.
 
 Goal (@pick (ordinal_finType 5) (fun i => i < 3)) == Some ord0.

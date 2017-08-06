@@ -34,7 +34,7 @@ End ExtraSeq.
 
 Section UntrustedInverse.
 
-Variable R : unitRingType.
+Variable R : comUnitRingType.
 Variables m n : nat.
 Implicit Type T : Type.
 
@@ -319,6 +319,18 @@ Definition solve_lup (A: @seqmx R) (b: @seqmx R) : option (@seqmx R) :=
 
 End FastLup.
 
-Close Scope ring_scope.
+Section ExtraTheory.
+
+(** Auxiliary lemma for an Ltac that will verify a matrix inverse *)
+Lemma mulmx_eq1_invmxE (A B : 'M[R]_n) : A *m B = 1%:M -> B = invmx A.
+Proof.
+  have Hmul : forall A B C : 'M[R]_n, A = B -> C *m A = C *m B.
+  - by move => A0 B0 C0 => ->.
+  move => AmulB_eq1; move: (Hmul (A *m B) (1%:M) (invmx A) AmulB_eq1).
+  rewrite mulmxA mulVmx; first by rewrite mul1mx mulmx1.
+  by move: (mulmx1_unit AmulB_eq1) => [-> _].
+Qed.
+
+End ExtraTheory.
 
 End UntrustedInverse.

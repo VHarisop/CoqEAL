@@ -243,7 +243,79 @@ Definition solve_nonhomogeneous_inv (M : @seqmx R) (b : seq R) :=
 
 Section FastLup.
 
-(* TODO: Move code from lup.v here, generic with respect to unitRingType. *)
+Definition find_pivot_lup {T1 T2: Type}  (UL: seq (seq R * T1 * T2)) :=
+  let fix find_pivot_aux UL (k : nat) :=
+      match UL with
+      | [::] => None
+      | (row_U, _, _) :: UL' =>
+        if (head 0 row_U) != 0 then
+          Some k
+        else
+          find_pivot_aux UL' (k.+1)
+      end
+  in
+  find_pivot_aux UL 0%N.
+
+Definition fast_lup (A: @seqmx R) (b : @seqmx R) :=
+  let fix lup_core dim ULP res :=
+      match dim with
+      | O => Some res
+      | dim'.+1 =>
+        match find_pivot_lup ULP with
+        | None => None
+        | Some k =>
+          match swap_rows_fast ULP 0 k with
+          | ((piv_row_U, _, _) as piv_row) :: UL' =>
+            let piv_elt := head 0 piv_row_U in
+            let update_UL_row row :=
+                match row with
+                | (row_U, row_L, row_idx) =>
+                  let piv_ratio := ((head 0 row_U) / piv_elt) in
+                  let f x y := x - (piv_ratio * y) in
+                  (zipwith f (behead row_U) (behead piv_row_U),
+                   piv_ratio :: row_L, row_idx)
+                end
+            in
+            let UL'' := map update_UL_row UL' in
+            lup_core dim' UL'' (piv_row :: res)
+          | _ => None (* impossible *)
+          end
+        end
+      end
+  in
+  let dim := size A in
+  let UL := map (fun row => (row, [::])) A in
+  lup_core dim (zip UL b) [::].
+
+Fixpoint backsub_L (ULP: seq (seq R * seq R * seq R)) (res: @seqmx R) :=
+  match ULP with
+  | [::] => res
+  | (_, row_L, row_b) :: ULP' =>
+    let backsub_L_aux x b :=
+        (b - (vdotQ row_L x)) :: x
+    in
+    zipwith backsub_L_aux (backsub_L ULP' res) row_b
+  end.
+
+Definition backsub_U (res_L: @seqmx R) (ULP: seq (seq R * seq R * seq R)) :=
+  let fix backsub_U_aux ULP res row_res_L  :=
+      match row_res_L, ULP with
+      | [::], _ | _, [::] => res
+      | b :: row_res_L', (row_U, _, _) :: ULP' =>
+        let lead_coeff := head 0 row_U in
+        let res' := ((b - (vdotQ res (behead row_U))) / lead_coeff) :: res in
+        backsub_U_aux ULP' res' row_res_L'
+      end
+  in
+  map (backsub_U_aux ULP [::]) res_L.
+
+Definition solve_lup (A: @seqmx R) (b: @seqmx R) : option (@seqmx R) :=
+  match fast_lup A b with
+  | Some ULP =>
+    let res0 := map (fun _ => [::]) b in
+    Some (backsub_U (backsub_L ULP res0) ULP)
+  | None => None
+  end.
 
 End FastLup.
 
